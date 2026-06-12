@@ -40,6 +40,7 @@ Hạ tầng dùng chung:
 
 | Service | Vai trò chính | Tài liệu |
 | --- | --- | --- |
+| Frontend | Giao diện người dùng cho người xem, chủ kênh và quản trị viên; tích hợp backend qua API Gateway. | [`frontend/README.md`](frontend/README.md) |
 | API Gateway | Cổng vào chung cho Frontend/Mobile, định tuyến request và gắn thông tin xác thực cho service nội bộ. | [`api-gateway/README.md`](api-gateway/README.md) |
 | Identity Service | Quản lý tài khoản, đăng nhập, refresh token, hồ sơ người dùng và khóa/mở khóa người dùng. | [`identity-service/README.md`](identity-service/README.md) |
 | Media Service | Quản lý kênh, video, danh mục, gói hội viên, quyền xem video và các nghiệp vụ media chính. | [`media-service/README.md`](media-service/README.md) |

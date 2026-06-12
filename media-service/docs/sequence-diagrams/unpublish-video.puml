@@ -1,0 +1,83 @@
+@startuml
+title Biểu đồ tuần tự - Gỡ video
+autonumber
+autoactivate on
+hide footbox
+
+skinparam maxMessageSize 260
+skinparam ParticipantPadding 48
+skinparam defaultFontSize 24
+skinparam sequence {
+  ActorFontSize 24
+  ParticipantFontSize 24
+  MessageFontSize 23
+  GroupFontSize 23
+  ReferenceFontSize 23
+}
+
+actor "Creator" as Creator
+participant "Frontend" as FE
+participant "API Gateway" as GW
+participant "Media Service" as MS
+database "Media DB" as DB
+participant "Object Storage" as Storage
+queue "Message Broker" as Broker
+participant "Finance Service" as Finance
+participant "Cleanup Worker" as Worker
+
+Creator -> FE: Xác nhận gỡ video
+FE -> GW: Gửi yêu cầu gỡ video
+GW -> GW: Kiểm tra phiên đăng nhập
+
+alt Chưa đăng nhập
+  GW --> FE: Từ chối yêu cầu
+  FE --> Creator: Hiển thị yêu cầu đăng nhập
+else Đã đăng nhập
+  GW -> MS: Chuyển tiếp yêu cầu gỡ video
+  MS -> DB: Lấy thông tin video
+
+  alt Video không tồn tại
+    DB --> MS: Không tìm thấy video
+    MS --> GW: Trả thông báo video không tồn tại
+    GW --> FE: Trả kết quả
+    FE --> Creator: Hiển thị lỗi gỡ video
+  else Video tồn tại
+    DB --> MS: Trả thông tin video
+    MS -> MS: Kiểm tra quyền sở hữu video
+
+    alt Không phải chủ sở hữu
+      MS --> GW: Từ chối gỡ video
+      GW --> FE: Trả kết quả
+      FE --> Creator: Hiển thị lỗi không có quyền
+    else Đúng chủ sở hữu
+      alt Video lỗi hoặc bị từ chối
+        MS -> Storage: Xóa raw file nếu còn tồn tại
+        Storage --> MS: Đã xử lý file raw
+        MS -> DB: Xóa bản ghi video lỗi
+        DB --> MS: Đã xóa video
+        MS --> GW: Trả kết quả xóa thành công
+        GW --> FE: Trả kết quả
+        FE --> Creator: Cập nhật danh sách video
+      else Video thông thường
+        MS -> DB: Đánh dấu video đang chờ xóa
+        DB --> MS: Đã cập nhật video
+        MS ->> Broker: Phát sự kiện video.delete.requested
+        Broker ->> Finance: Chuyển sự kiện để xử lý hoàn tiền/doanh thu nếu cần
+        MS --> GW: Trả kết quả gỡ video thành công
+        GW --> FE: Trả kết quả
+        FE --> Creator: Hiển thị trạng thái video đã gỡ
+
+        opt Đến thời điểm dọn dẹp dữ liệu lưu trữ
+          Worker -> DB: Tìm video sẵn sàng xóa file
+          DB --> Worker: Trả danh sách video
+          Worker -> Storage: Xóa raw, processed và thumbnail nếu có
+          Storage --> Worker: Đã xóa hoặc bỏ qua file không còn tồn tại
+          Worker -> DB: Đánh dấu storage đã được dọn dẹp
+          DB --> Worker: Đã cập nhật
+        end
+      end
+    end
+  end
+end
+
+@enduml

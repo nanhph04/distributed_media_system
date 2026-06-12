@@ -1,0 +1,30 @@
+@startuml
+title Biểu đồ hoạt động - Khóa tài khoản - Chi tiết 1: Media xử lý sự kiện
+
+skinparam TitleFontSize 38
+skinparam defaultFontSize 34
+skinparam ArrowFontSize 32
+skinparam ActivityFontSize 34
+skinparam DiamondFontSize 32
+skinparam PartitionFontSize 34
+
+|Message Broker|
+start
+:Có sự kiện tài khoản đã đổi trạng thái;
+
+|Media Service|
+:Nhận sự kiện tài khoản bị khóa;
+:Tắt tự động gia hạn hội viên do người dùng này mua;
+:Tìm kênh thuộc sở hữu của người dùng;
+
+if (Người dùng có kênh đang hoạt động?) then (Có)
+  :Khóa kênh của người dùng;
+  :Tắt tự động gia hạn hội viên của kênh;
+  :Phát tiếp sự kiện kênh đã đổi trạng thái;
+else (Không)
+  :Không cần cập nhật trạng thái kênh;
+endif
+
+stop
+
+@enduml

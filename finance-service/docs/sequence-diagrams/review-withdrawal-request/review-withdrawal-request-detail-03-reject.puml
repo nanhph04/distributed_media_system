@@ -1,0 +1,70 @@
+@startuml
+title Biểu đồ tuần tự - Duyệt yêu cầu rút tiền - Chi tiết 3: Từ chối yêu cầu
+autonumber
+autoactivate on
+hide footbox
+
+skinparam maxMessageSize 260
+skinparam ParticipantPadding 48
+skinparam defaultFontSize 24
+skinparam sequence {
+  ActorFontSize 24
+  ParticipantFontSize 24
+  MessageFontSize 23
+  GroupFontSize 23
+  ReferenceFontSize 23
+}
+skinparam BoxPadding 8
+
+actor "Admin" as Admin
+participant "Frontend" as FE
+participant "API Gateway" as GW
+
+box "Finance Service" #F5F5F5
+  participant "WithdrawalsController" as Controller
+  participant "RejectWithdrawalUseCase" as RejectUC
+  database "Finance DB" as DB
+end box
+
+Admin -> FE: Nhập lý do từ chối
+FE -> GW: Gửi yêu cầu từ chối rút tiền
+GW -> GW: Kiểm tra phiên đăng nhập và quyền admin
+
+alt Không phải admin
+  GW --> FE: Từ chối yêu cầu
+  FE --> Admin: Hiển thị thông báo không có quyền
+else Là admin
+  GW -> Controller: Chuyển tiếp yêu cầu từ chối
+  Controller -> RejectUC: Xử lý từ chối yêu cầu
+  RejectUC -> RejectUC: Kiểm tra dữ liệu, lý do và quyền admin
+
+  alt Dữ liệu không hợp lệ
+    RejectUC --> Controller: Trả thông báo không thể xử lý
+    Controller --> GW: Trả kết quả
+    GW --> FE: Trả kết quả
+    FE --> Admin: Hiển thị lỗi xử lý rút tiền
+  else Dữ liệu hợp lệ
+    RejectUC -> DB: Khóa yêu cầu rút tiền, ví và giao dịch
+
+    alt Thiếu yêu cầu, ví hoặc giao dịch
+      DB --> RejectUC: Không đủ dữ liệu để xử lý
+      RejectUC --> Controller: Trả thông báo không thể từ chối
+      Controller --> GW: Trả kết quả
+      GW --> FE: Trả kết quả
+      FE --> Admin: Hiển thị lỗi xử lý rút tiền
+    else Dữ liệu đầy đủ
+      DB --> RejectUC: Trả yêu cầu, ví và giao dịch
+      RejectUC -> RejectUC: Đánh dấu yêu cầu rejected
+      RejectUC -> RejectUC: Trả coin từ số dư tạm giữ về số dư khả dụng
+      RejectUC -> RejectUC: Đánh dấu giao dịch failed
+      RejectUC -> DB: Lưu yêu cầu, ví và giao dịch
+      DB --> RejectUC: Đã lưu thay đổi
+      RejectUC --> Controller: Trả thông tin yêu cầu đã từ chối
+      Controller --> GW: Trả kết quả
+      GW --> FE: Trả kết quả
+      FE --> Admin: Hiển thị yêu cầu đã bị từ chối
+    end
+  end
+end
+
+@enduml

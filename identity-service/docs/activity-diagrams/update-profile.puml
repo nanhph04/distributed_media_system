@@ -1,0 +1,68 @@
+@startuml
+title Activity Diagram - Cap nhat profile
+
+|Nguoi dung|
+start
+:Mo man hinh ho so ca nhan;
+:Nhap thong tin can cap nhat;
+:Chon luu thay doi;
+
+|Frontend|
+:Kiem tra thong tin tren form;
+
+if (Thong tin hop le?) then (Khong)
+  :Hien thi loi nhap lieu;
+  |Nguoi dung|
+  :Sua lai thong tin;
+  stop
+else (Co)
+endif
+
+:Gui yeu cau cap nhat profile;
+
+|API Gateway|
+:Kiem tra phien dang nhap;
+
+if (Da dang nhap?) then (Khong)
+  :Tu choi yeu cau;
+  |Frontend|
+  :Hien thi yeu cau dang nhap;
+  |Nguoi dung|
+  :Xem thong bao;
+  stop
+else (Co)
+endif
+
+:Chuyen tiep yeu cau;
+
+|Identity Service|
+:Kiem tra profile nguoi dung;
+:Kiem tra thong tin cap nhat;
+
+if (Co the cap nhat?) then (Khong)
+  :Tra thong bao cap nhat that bai;
+  |API Gateway|
+  :Tra ket qua ve frontend;
+  |Frontend|
+  :Hien thi loi cap nhat;
+  |Nguoi dung|
+  :Xem thong bao loi;
+  stop
+else (Co)
+endif
+
+:Luu thong tin profile moi;
+:Tra ket qua thanh cong;
+
+|API Gateway|
+:Tra ket qua ve frontend;
+
+|Frontend|
+:Cap nhat thong tin hien thi;
+:Thong bao cap nhat thanh cong;
+
+|Nguoi dung|
+:Xem profile da cap nhat;
+stop
+
+@enduml

@@ -1,0 +1,82 @@
+@startuml
+title Sequence Diagram - Rút tiền - Chi tiết 1: Kiểm tra điều kiện
+autonumber
+autoactivate on
+hide footbox
+
+skinparam maxMessageSize 220
+skinparam ParticipantPadding 36
+skinparam defaultFontSize 18
+skinparam sequence {
+  ActorFontSize 18
+  ParticipantFontSize 18
+  MessageFontSize 17
+  GroupFontSize 17
+  ReferenceFontSize 17
+}
+skinparam BoxPadding 8
+
+actor "Creator" as Creator
+participant "Frontend" as FE
+participant "API Gateway" as GW
+
+box "Finance Service" #F5F5F5
+  participant "WithdrawalsController" as Controller
+  participant "RequestWithdrawalUseCase" as RequestUC
+  database "Finance DB" as DB
+end box
+
+Creator -> FE: Nhập số coin và thông tin ngân hàng
+FE -> GW: Gửi yêu cầu rút tiền
+GW -> GW: Kiểm tra phiên đăng nhập
+
+alt Chưa đăng nhập
+  GW --> FE: Từ chối yêu cầu
+  FE --> Creator: Hiển thị yêu cầu đăng nhập
+else Đã đăng nhập
+  GW -> Controller: Chuyển tiếp yêu cầu rút tiền
+  Controller -> RequestUC: Xử lý tạo yêu cầu rút tiền
+  RequestUC -> RequestUC: Kiểm tra userId và dữ liệu đầu vào
+
+  alt Dữ liệu đầu vào không hợp lệ
+    RequestUC --> Controller: Trả thông báo thông tin không hợp lệ
+    Controller --> GW: Trả kết quả
+    GW --> FE: Trả kết quả
+    FE --> Creator: Hiển thị lỗi rút tiền
+  else Dữ liệu đầu vào hợp lệ
+    RequestUC -> DB: Tìm và khóa ví của creator
+
+    alt Không tìm thấy ví
+      DB --> RequestUC: Không có ví
+      RequestUC --> Controller: Trả thông báo không tìm thấy ví
+      Controller --> GW: Trả kết quả
+      GW --> FE: Trả kết quả
+      FE --> Creator: Hiển thị lỗi rút tiền
+    else Tìm thấy ví
+      DB --> RequestUC: Trả thông tin ví
+      RequestUC -> DB: Kiểm tra kênh có đang bị tạm dừng payout không
+
+      alt Kênh đang bị tạm dừng payout
+        DB --> RequestUC: Có trạng thái tạm dừng
+        RequestUC --> Controller: Trả thông báo chưa được rút tiền
+        Controller --> GW: Trả kết quả
+        GW --> FE: Trả kết quả
+        FE --> Creator: Hiển thị lỗi rút tiền
+      else Kênh được phép payout
+        DB --> RequestUC: Không bị tạm dừng
+        RequestUC -> RequestUC: Kiểm tra trạng thái ví và số dư khả dụng
+
+        alt Ví không hoạt động hoặc số dư không đủ
+          RequestUC --> Controller: Trả thông báo không đủ điều kiện
+          Controller --> GW: Trả kết quả
+          GW --> FE: Trả kết quả
+          FE --> Creator: Hiển thị lỗi rút tiền
+        else Đủ điều kiện rút tiền
+          RequestUC --> Controller: Chuyển sang bước tạo yêu cầu rút tiền
+        end
+      end
+    end
+  end
+end
+
+@enduml

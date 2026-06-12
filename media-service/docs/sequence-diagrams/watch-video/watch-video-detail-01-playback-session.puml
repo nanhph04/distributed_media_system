@@ -1,0 +1,76 @@
+@startuml
+title Biểu đồ tuần tự - Xem video - Chi tiết 1: Khởi tạo phiên phát
+autonumber
+autoactivate on
+hide footbox
+
+skinparam maxMessageSize 220
+skinparam ParticipantPadding 36
+skinparam defaultFontSize 18
+skinparam sequence {
+  ActorFontSize 18
+  ParticipantFontSize 18
+  MessageFontSize 17
+  GroupFontSize 17
+  ReferenceFontSize 17
+}
+skinparam BoxPadding 8
+
+actor "Người xem" as Viewer
+participant "Frontend" as FE
+participant "API Gateway" as GW
+
+box "Media Service" #F5F5F5
+  participant "VideosController" as VC
+  participant "PlayVideoUseCase" as PlayUC
+  participant "VideoWatchAccessService" as Access
+  participant "PlaybackTokenService" as Token
+  database "Media DB" as DB
+end box
+
+Viewer -> FE: Chọn xem video
+FE -> GW: Gửi yêu cầu phát video
+GW -> GW: Kiểm tra phiên đăng nhập
+
+alt Chưa đăng nhập
+  GW --> FE: Từ chối yêu cầu
+  FE --> Viewer: Hiển thị yêu cầu đăng nhập
+else Đã đăng nhập
+  GW -> VC: Chuyển tiếp yêu cầu phát video
+  VC -> PlayUC: Xử lý tạo phiên phát
+  PlayUC -> DB: Lấy thông tin cơ bản của video
+
+  alt Video không tồn tại
+    DB --> PlayUC: Không có dữ liệu
+    PlayUC --> VC: Trả thông báo video không tồn tại
+    VC --> GW: Trả kết quả
+    GW --> FE: Trả kết quả
+    FE --> Viewer: Hiển thị lỗi
+  else Video tồn tại
+    DB --> PlayUC: Trả thông tin video
+    PlayUC -> Access: Kiểm tra trạng thái video, kênh và quyền xem
+    Access -> DB: Lấy ngữ cảnh truy cập của người xem
+
+    alt Không được phép xem
+      DB --> Access: Không thỏa điều kiện
+      Access --> PlayUC: Từ chối quyền xem
+      PlayUC --> VC: Trả kết quả không được xem
+      VC --> GW: Trả kết quả
+      GW --> FE: Trả kết quả
+      FE --> Viewer: Hiển thị yêu cầu mở khóa hoặc hội viên
+    else Được phép xem
+      DB --> Access: Thỏa điều kiện
+      Access --> PlayUC: Cho phép xem
+      PlayUC -> DB: Lấy tiến độ xem gần nhất
+      DB --> PlayUC: Trả tiến độ xem
+      PlayUC -> Token: Tạo token phát video
+      Token --> PlayUC: Trả token
+      PlayUC --> VC: Trả đường dẫn phát, token và vị trí xem tiếp
+      VC --> GW: Trả thông tin phát video
+      GW --> FE: Trả thông tin phát video
+      FE --> Viewer: Mở trình phát video
+    end
+  end
+end
+
+@enduml

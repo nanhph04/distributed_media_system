@@ -1,0 +1,57 @@
+@startuml
+title Biểu đồ hoạt động - Duyệt yêu cầu rút tiền - Chi tiết 3: Từ chối yêu cầu
+
+skinparam TitleFontSize 38
+skinparam defaultFontSize 34
+skinparam ArrowFontSize 32
+skinparam ActivityFontSize 34
+skinparam DiamondFontSize 32
+skinparam PartitionFontSize 34
+
+|Admin|
+start
+:Nhập lý do từ chối;
+:Xác nhận từ chối yêu cầu;
+
+|Frontend|
+:Gửi yêu cầu từ chối rút tiền;
+
+|Finance Service|
+:Kiểm tra quyền admin;
+:Kiểm tra lý do từ chối;
+
+if (Lý do hợp lệ?) then (Có)
+  :Tìm và khóa yêu cầu rút tiền;
+else (Không)
+  :Trả thông báo cần nhập lý do từ chối;
+  stop
+endif
+
+if (Yêu cầu tồn tại?) then (Có)
+  :Tìm và khóa ví liên quan;
+else (Không)
+  :Trả thông báo không tìm thấy yêu cầu;
+  stop
+endif
+
+if (Tìm thấy ví và giao dịch?) then (Có)
+  :Kiểm tra trạng thái yêu cầu;
+else (Không)
+  :Trả thông báo thiếu dữ liệu xử lý;
+  stop
+endif
+
+if (Yêu cầu đang chờ duyệt?) then (Có)
+  :Chuyển yêu cầu sang bị từ chối;
+  :Trả coin về số dư khả dụng;
+  :Đánh dấu giao dịch rút tiền thất bại;
+else (Không)
+  :Trả thông báo yêu cầu đã được xử lý;
+  stop
+endif
+
+:Lưu thay đổi ví, yêu cầu và giao dịch;
+:Trả kết quả từ chối yêu cầu;
+stop
+
+@enduml

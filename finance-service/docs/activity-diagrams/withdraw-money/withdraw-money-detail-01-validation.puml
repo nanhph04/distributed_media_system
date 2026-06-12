@@ -1,0 +1,52 @@
+@startuml
+title Biểu đồ hoạt động - Rút tiền - Chi tiết 1: Kiểm tra điều kiện
+
+skinparam TitleFontSize 38
+skinparam defaultFontSize 34
+skinparam ArrowFontSize 32
+skinparam ActivityFontSize 34
+skinparam DiamondFontSize 32
+skinparam PartitionFontSize 34
+
+|Finance Service|
+start
+:Nhận yêu cầu rút tiền;
+:Kiểm tra thông tin yêu cầu;
+
+if (Thông tin hợp lệ?) then (Có)
+  :Tìm ví của creator;
+else (Không)
+  :Trả thông báo thông tin không hợp lệ;
+  stop
+endif
+
+if (Tìm thấy ví?) then (Có)
+  :Kiểm tra trạng thái ví;
+else (Không)
+  :Trả thông báo không tìm thấy ví;
+  stop
+endif
+
+if (Ví đang hoạt động?) then (Có)
+  :Kiểm tra trạng thái payout của kênh;
+else (Không)
+  :Trả thông báo ví không thể rút tiền;
+  stop
+endif
+
+if (Kênh được phép payout?) then (Có)
+  :Kiểm tra số dư khả dụng;
+else (Không)
+  :Trả thông báo kênh đang bị tạm dừng rút tiền;
+  stop
+endif
+
+if (Số dư đủ để rút?) then (Có)
+  :Cho phép tạo yêu cầu rút tiền;
+else (Không)
+  :Trả thông báo số dư không đủ;
+endif
+
+stop
+
+@enduml

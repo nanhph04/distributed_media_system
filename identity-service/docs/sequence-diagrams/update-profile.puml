@@ -1,0 +1,40 @@
+@startuml
+title Sequence Diagram - Cap nhat profile
+autonumber
+autoactivate on
+
+actor "Nguoi dung" as User
+participant "Frontend" as FE
+participant "API Gateway" as GW
+participant "Identity Service" as IDS
+
+User -> FE: Nhap thong tin profile moi
+FE -> FE: Kiem tra thong tin tren form
+
+alt Thong tin tren form khong hop le
+  FE --> User: Hien thi loi nhap lieu
+else Thong tin tren form hop le
+  FE -> GW: Gui yeu cau cap nhat profile
+  GW -> GW: Kiem tra phien dang nhap
+
+  alt Chua dang nhap
+    GW --> FE: Tu choi yeu cau
+    FE --> User: Hien thi yeu cau dang nhap
+  else Da dang nhap
+    GW -> IDS: Chuyen tiep yeu cau
+    IDS -> IDS: Kiem tra profile va thong tin cap nhat
+
+    alt Khong the cap nhat
+      IDS --> GW: Thong bao cap nhat that bai
+      GW --> FE: Tra ket qua
+      FE --> User: Hien thi loi cap nhat
+    else Cap nhat thanh cong
+      IDS -> IDS: Luu thong tin profile moi
+      IDS --> GW: Tra ket qua thanh cong
+      GW --> FE: Tra ket qua
+      FE --> User: Hien thi profile da cap nhat
+    end
+  end
+end
+
+@enduml

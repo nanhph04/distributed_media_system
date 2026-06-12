@@ -1,0 +1,82 @@
+@startuml
+title Biểu đồ hoạt động - Nạp tiền - Tổng quát
+
+skinparam defaultFontSize 34
+skinparam ArrowFontSize 32
+skinparam ActivityFontSize 34
+skinparam DiamondFontSize 32
+skinparam PartitionFontSize 34
+
+|Người dùng|
+start
+:Mở màn hình nạp tiền;
+:Chọn gói nạp;
+:Xác nhận nạp tiền;
+
+|Frontend|
+:Gửi yêu cầu tạo giao dịch nạp;
+
+|API Gateway|
+:Kiểm tra phiên đăng nhập;
+
+if (Phiên hợp lệ?) then (Có)
+  :Chuyển yêu cầu sang Finance Service;
+else (Không)
+  |Frontend|
+  :Hiển thị yêu cầu đăng nhập;
+  |Người dùng|
+  :Xem thông báo;
+  stop
+endif
+
+|Finance Service|
+:Kiểm tra gói nạp và ví người dùng;
+
+if (Thông tin hợp lệ?) then (Có)
+  :Tạo giao dịch nạp đang chờ thanh toán;
+  :Tạo link thanh toán PayOS;
+else (Không)
+  |Frontend|
+  :Hiển thị lỗi tạo giao dịch;
+  |Người dùng|
+  :Xem thông báo lỗi;
+  stop
+endif
+
+if (Có link thanh toán?) then (Có)
+  :Trả link thanh toán;
+else (Không)
+  |Frontend|
+  :Hiển thị lỗi tạo thanh toán;
+  |Người dùng|
+  :Xem thông báo lỗi;
+  stop
+endif
+
+|Frontend|
+:Điều hướng người dùng sang PayOS;
+
+|Người dùng|
+:Thanh toán trên PayOS;
+
+|PayOS|
+:Gửi kết quả thanh toán về hệ thống;
+
+|Finance Service|
+:Xác thực và xử lý kết quả thanh toán;
+
+if (Thanh toán hợp lệ?) then (Có)
+  :Cộng coin vào ví người dùng;
+  :Đánh dấu giao dịch nạp hoàn tất;
+else (Không)
+  :Bỏ qua hoặc giữ giao dịch chờ xử lý;
+endif
+
+|Frontend|
+:Cập nhật số dư khi người dùng quay lại;
+
+|Người dùng|
+:Xem số dư mới;
+stop
+
+@enduml

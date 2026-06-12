@@ -1,0 +1,60 @@
+@startuml
+title Sequence Diagram - Rút tiền - Chi tiết 2: Tạo yêu cầu chờ duyệt
+autonumber
+autoactivate on
+hide footbox
+
+skinparam maxMessageSize 220
+skinparam ParticipantPadding 36
+skinparam defaultFontSize 18
+skinparam sequence {
+  ActorFontSize 18
+  ParticipantFontSize 18
+  MessageFontSize 17
+  GroupFontSize 17
+  ReferenceFontSize 17
+}
+skinparam BoxPadding 8
+
+participant "API Gateway" as GW
+
+box "Finance Service" #F5F5F5
+  participant "WithdrawalsController" as Controller
+  participant "RequestWithdrawalUseCase" as RequestUC
+  participant "Wallet" as Wallet
+  participant "Withdrawal" as Withdrawal
+  participant "Transaction" as Transaction
+  database "Finance DB" as DB
+end box
+
+GW -> Controller: Chuyển tiếp yêu cầu rút tiền hợp lệ
+Controller -> RequestUC: Tiếp tục tạo yêu cầu rút tiền
+RequestUC -> Wallet: Tạm giữ số coin cần rút
+
+alt Số coin không hợp lệ hoặc không đủ số dư
+  Wallet --> RequestUC: Từ chối tạm giữ coin
+  RequestUC --> Controller: Trả thông báo không thể rút tiền
+  Controller --> GW: Trả kết quả
+else Tạm giữ coin thành công
+  Wallet --> RequestUC: Đã chuyển coin sang số dư tạm giữ
+  RequestUC -> RequestUC: Tính tỷ giá, phí và số tiền thực nhận
+  RequestUC -> Withdrawal: Tạo yêu cầu rút tiền trạng thái pending
+  Withdrawal --> RequestUC: Trả thông tin yêu cầu rút tiền
+  RequestUC -> DB: Kiểm tra giao dịch theo mã tham chiếu
+
+  alt Giao dịch đã tồn tại
+    DB --> RequestUC: Đã có giao dịch
+    RequestUC --> Controller: Trả thông báo trùng giao dịch
+    Controller --> GW: Trả kết quả
+  else Chưa có giao dịch
+    DB --> RequestUC: Chưa có giao dịch
+    RequestUC -> Transaction: Tạo giao dịch rút tiền trạng thái pending
+    Transaction --> RequestUC: Trả giao dịch rút tiền
+    RequestUC -> DB: Lưu ví, yêu cầu rút tiền và giao dịch
+    DB --> RequestUC: Đã lưu thay đổi
+    RequestUC --> Controller: Trả thông tin yêu cầu rút tiền
+    Controller --> GW: Trả kết quả
+  end
+end
+
+@enduml

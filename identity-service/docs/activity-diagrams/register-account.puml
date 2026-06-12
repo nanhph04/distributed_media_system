@@ -1,0 +1,68 @@
+@startuml
+title Activity Diagram - Tao tai khoan
+
+|Nguoi dung|
+start
+:Nhap email va mat khau;
+:Chon dang ky;
+
+|Frontend|
+:Gui yeu cau dang ky;
+
+|API Gateway|
+:Chuyen tiep yeu cau;
+
+|Identity Service|
+:Kiem tra thong tin dang ky;
+
+if (Co the tao tai khoan?) then (Khong)
+  :Tra thong bao dang ky that bai;
+  |Frontend|
+  :Hien thi loi dang ky;
+  |Nguoi dung|
+  :Xem thong bao loi;
+  stop
+else (Co)
+endif
+
+:Tao tai khoan cho xac thuc;
+:Gui ma OTP qua email;
+
+|Frontend|
+:Hien thi man hinh nhap OTP;
+
+|Nguoi dung|
+:Nhap OTP;
+
+|Frontend|
+:Gui yeu cau xac thuc email;
+
+|API Gateway|
+:Chuyen tiep yeu cau;
+
+|Identity Service|
+:Kiem tra OTP;
+
+if (OTP hop le?) then (Khong)
+  :Tra thong bao xac thuc that bai;
+  |Frontend|
+  :Hien thi loi OTP;
+  |Nguoi dung|
+  :Xem thong bao loi;
+  stop
+else (Co)
+endif
+
+:Hoan tat tao tai khoan;
+
+|API Gateway|
+:Tra ket qua ve frontend;
+
+|Frontend|
+:Thong bao tao tai khoan thanh cong;
+
+|Nguoi dung|
+:Xem ket qua;
+stop
+
+@enduml

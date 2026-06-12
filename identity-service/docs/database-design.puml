@@ -1,0 +1,94 @@
+@startuml
+title Thiết kế database Identity Service - Tổng quan
+
+left to right direction
+
+skinparam TitleFontSize 42
+skinparam defaultFontSize 30
+skinparam ArrowFontSize 28
+skinparam ClassFontSize 30
+skinparam ClassAttributeFontSize 29
+skinparam ClassHeaderFontSize 32
+skinparam linetype ortho
+skinparam nodesep 90
+skinparam ranksep 80
+hide circle
+
+entity "accounts" as accounts {
+  * id : uuid <<PK>>
+  --
+  * email : varchar <<UQ>>
+  * password_hash : varchar
+  * role : user/admin
+  * status : active/suspended
+  email_verified_at : datetime
+}
+
+entity "user_profiles" as profiles {
+  * user_id : uuid <<PK, FK>>
+  --
+  display_name : varchar
+  avatar_url : varchar
+  phone_number : varchar
+  date_of_birth : date
+}
+
+entity "refresh_sessions" as sessions {
+  * id : uuid <<PK>>
+  --
+  * user_id : uuid <<FK>>
+  * refresh_token_hash : varchar <<UQ>>
+  * expires_at : datetime
+  revoked_at : datetime
+}
+
+entity "otp_sessions" as otp_sessions {
+  * id : uuid <<PK>>
+  --
+  account_id : uuid <<FK>>
+  * email : varchar
+  * purpose : register/forgot_password
+  * otp_hash : varchar
+  * expires_at : datetime
+  consumed_at : datetime
+}
+
+entity "otp_rate_limits" as otp_limits {
+  * id : uuid <<PK>>
+  --
+  * action : varchar
+  * scope : email/ip
+  * rate_key : varchar
+  * attempts : integer
+  * window_expires_at : datetime
+}
+
+entity "outbox_messages" as outbox {
+  * id : uuid <<PK>>
+  --
+  * event_id : uuid <<UQ>>
+  * event_type : varchar
+  * aggregate_id : varchar
+  * payload : jsonb
+  * status : pending/published/failed
+}
+
+accounts ||--|| profiles : "hồ sơ"
+accounts ||--o{ sessions : "phiên đăng nhập"
+accounts ||--o{ otp_sessions : "OTP"
+sessions ||--o| sessions : "thay thế"
+
+accounts -[hidden]right- outbox
+otp_sessions -[hidden]right- otp_limits
+
+note bottom of accounts
+  Bảng tài khoản là nguồn dữ liệu chính
+  cho đăng nhập, phân quyền và khóa tài khoản.
+end note
+
+note bottom of outbox
+  Lưu event cần phát ra ngoài hệ thống:
+  user.registered, user.status.changed.
+end note
+
+@enduml

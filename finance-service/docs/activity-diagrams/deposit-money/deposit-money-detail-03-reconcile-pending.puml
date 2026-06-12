@@ -1,0 +1,65 @@
+@startuml
+title Biểu đồ hoạt động - Nạp tiền - Chi tiết 3: Đối soát giao dịch chờ
+
+skinparam defaultFontSize 34
+skinparam ArrowFontSize 32
+skinparam ActivityFontSize 34
+skinparam DiamondFontSize 32
+skinparam PartitionFontSize 34
+
+|Finance Service|
+start
+:Chọn giao dịch nạp đang chờ;
+:Đặt khóa đối soát để tránh xử lý trùng;
+
+if (Đặt khóa thành công?) then (Có)
+  :Kiểm tra trạng thái giao dịch nạp;
+else (Không)
+  :Bỏ qua vì giao dịch đang được xử lý;
+  stop
+endif
+
+if (Giao dịch còn đang chờ?) then (Có)
+  :Kiểm tra thời hạn thanh toán;
+else (Không)
+  :Bỏ qua giao dịch không còn chờ;
+  :Giải phóng khóa đối soát;
+  stop
+endif
+
+if (Đã quá hạn thanh toán?) then (Có)
+  :Hủy giao dịch nạp và link PayOS;
+  :Giải phóng khóa đối soát;
+  stop
+else (Không)
+  |PayOS|
+  :Trả trạng thái thanh toán hiện tại;
+endif
+
+|Finance Service|
+:Kiểm tra mã thanh toán và số tiền;
+
+if (Thông tin khớp?) then (Có)
+  :Đánh giá trạng thái thanh toán;
+else (Không)
+  :Giữ giao dịch ở trạng thái chờ;
+  :Giải phóng khóa đối soát;
+  stop
+endif
+
+if (PayOS báo đã thanh toán?) then (Có)
+  :Cộng coin vào ví người dùng;
+  :Ghi nhận lịch sử giao dịch;
+  :Đánh dấu giao dịch nạp hoàn tất;
+else (Không)
+  if (PayOS báo hết hạn hoặc đã hủy?) then (Có)
+    :Đánh dấu giao dịch nạp thất bại;
+  else (Đang chờ)
+    :Giữ giao dịch ở trạng thái chờ;
+  endif
+endif
+
+:Giải phóng khóa đối soát;
+stop
+
+@enduml

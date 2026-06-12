@@ -1,0 +1,67 @@
+@startuml
+title Biểu đồ tuần tự - Duyệt yêu cầu rút tiền - Tổng quát
+autonumber
+autoactivate on
+hide footbox
+
+skinparam maxMessageSize 260
+skinparam ParticipantPadding 48
+skinparam defaultFontSize 24
+skinparam sequence {
+  ActorFontSize 24
+  ParticipantFontSize 24
+  MessageFontSize 23
+  GroupFontSize 23
+  ReferenceFontSize 23
+}
+
+actor "Admin" as Admin
+participant "Frontend" as FE
+participant "API Gateway" as GW
+participant "Finance Service" as FS
+database "Finance DB" as DB
+
+Admin -> FE: Mở màn hình yêu cầu rút tiền
+
+ref over Admin, FE, GW, FS, DB
+  Chi tiết 1: Xem danh sách và chi tiết yêu cầu
+end ref
+
+FE -> GW: Yêu cầu danh sách hoặc chi tiết rút tiền
+GW -> GW: Kiểm tra phiên đăng nhập và quyền admin
+GW -> FS: Chuyển tiếp yêu cầu tra cứu
+FS -> DB: Lấy dữ liệu yêu cầu rút tiền
+DB --> FS: Trả dữ liệu yêu cầu
+FS --> GW: Trả kết quả tra cứu
+GW --> FE: Trả kết quả
+FE --> Admin: Hiển thị danh sách hoặc chi tiết yêu cầu
+
+Admin -> FE: Chọn hành động xử lý yêu cầu
+
+alt Admin hoàn tất yêu cầu
+  ref over FE, GW, FS, DB
+    Chi tiết 2: Hoàn tất yêu cầu rút tiền
+  end ref
+
+  FE -> GW: Gửi yêu cầu hoàn tất rút tiền
+  GW -> FS: Chuyển tiếp yêu cầu hoàn tất
+  FS -> DB: Cập nhật yêu cầu, ví và giao dịch
+  DB --> FS: Đã lưu thay đổi
+  FS --> GW: Trả kết quả hoàn tất
+  GW --> FE: Trả kết quả
+  FE --> Admin: Hiển thị yêu cầu đã hoàn tất
+else Admin từ chối yêu cầu
+  ref over FE, GW, FS, DB
+    Chi tiết 3: Từ chối yêu cầu rút tiền
+  end ref
+
+  FE -> GW: Gửi yêu cầu từ chối rút tiền
+  GW -> FS: Chuyển tiếp yêu cầu từ chối
+  FS -> DB: Cập nhật yêu cầu, ví và giao dịch
+  DB --> FS: Đã lưu thay đổi
+  FS --> GW: Trả kết quả từ chối
+  GW --> FE: Trả kết quả
+  FE --> Admin: Hiển thị yêu cầu đã bị từ chối
+end
+
+@enduml

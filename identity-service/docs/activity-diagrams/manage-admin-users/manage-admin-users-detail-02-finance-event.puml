@@ -1,0 +1,39 @@
+@startuml
+title Biểu đồ hoạt động - Khóa tài khoản - Chi tiết 2: Finance xử lý sự kiện
+
+skinparam TitleFontSize 38
+skinparam defaultFontSize 34
+skinparam ArrowFontSize 32
+skinparam ActivityFontSize 34
+skinparam DiamondFontSize 32
+skinparam PartitionFontSize 34
+
+|Message Broker|
+start
+:Có sự kiện tài khoản đã đổi trạng thái;
+
+|Finance Service|
+:Nhận sự kiện tài khoản bị khóa;
+:Kiểm tra sự kiện đã xử lý chưa;
+
+if (Sự kiện mới?) then (Có)
+  :Tìm ví của người dùng;
+  :Đóng băng ví;
+  :Ghi nhận sự kiện đã xử lý;
+else (Không)
+  :Bỏ qua để tránh xử lý trùng;
+endif
+
+|Message Broker|
+if (Có sự kiện kênh bị khóa phát sinh?) then (Có)
+  |Finance Service|
+  :Nhận sự kiện kênh bị khóa;
+  :Tạm giữ payout của kênh;
+  :Chặn rút tiền từ doanh thu của kênh trong thời gian hold;
+else (Không)
+  :Không phát sinh xử lý payout theo kênh;
+endif
+
+stop
+
+@enduml

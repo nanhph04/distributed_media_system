@@ -1,0 +1,67 @@
+@startuml
+title Biểu đồ tuần tự - Mở khóa video - Chi tiết 2: Thanh toán và ghi nhận mở khóa
+autonumber
+autoactivate on
+hide footbox
+
+skinparam maxMessageSize 220
+skinparam ParticipantPadding 36
+skinparam defaultFontSize 28
+skinparam sequence {
+  ActorFontSize 18
+  ParticipantFontSize 18
+  MessageFontSize 17
+  GroupFontSize 17
+  ReferenceFontSize 17
+}               
+skinparam BoxPadding 8
+
+participant "API Gateway" as GW
+
+box "Media Service" #F5F5F5
+  participant "VideosController" as VC
+  participant "PurchaseVideoUseCase" as PurchaseUC
+  participant "FinancePaymentClient" as FinanceClient
+  participant "UnlockVideoUseCase" as UnlockUC
+  database "Media DB" as DB
+end box
+
+participant "Finance Service" as FS
+
+GW -> VC: Chuyển tiếp yêu cầu mở khóa hợp lệ
+VC -> PurchaseUC: Tiếp tục xử lý mua video
+PurchaseUC -> FinanceClient: Tạo yêu cầu trừ tiền
+FinanceClient -> FS: Gọi thanh toán mua video
+
+alt Thanh toán bị từ chối
+  FS --> FinanceClient: Trả kết quả thất bại
+  FinanceClient --> PurchaseUC: Báo lỗi thanh toán
+  PurchaseUC --> VC: Trả kết quả thất bại
+  VC --> GW: Trả kết quả
+else Thanh toán thành công
+  FS --> FinanceClient: Trả kết quả giao dịch
+  FinanceClient --> PurchaseUC: Trả thông tin thanh toán
+
+  alt Không có giao dịch thanh toán
+    PurchaseUC --> VC: Trả kết quả mở khóa thất bại
+    VC --> GW: Trả kết quả
+  else Có giao dịch thanh toán
+    PurchaseUC -> UnlockUC: Ghi nhận quyền mở khóa
+    UnlockUC -> DB: Kiểm tra unlock đã tồn tại
+
+    alt Đã tồn tại
+      DB --> UnlockUC: Đã có quyền mở khóa
+      UnlockUC --> PurchaseUC: Bỏ qua ghi trùng
+    else Chưa tồn tại
+      DB --> UnlockUC: Chưa có quyền mở khóa
+      UnlockUC -> DB: Lưu quyền mở khóa video
+      DB --> UnlockUC: Đã lưu
+      UnlockUC --> PurchaseUC: Đã ghi nhận
+    end
+
+    PurchaseUC --> VC: Trả kết quả mở khóa thành công
+    VC --> GW: Trả kết quả
+  end
+end
+
+@enduml

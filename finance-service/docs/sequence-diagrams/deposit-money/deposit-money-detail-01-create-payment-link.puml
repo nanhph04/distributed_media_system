@@ -1,0 +1,90 @@
+@startuml
+title Biểu đồ tuần tự - Nạp tiền - Chi tiết 1: Tạo link thanh toán
+autonumber
+autoactivate on
+hide footbox
+
+skinparam maxMessageSize 260
+skinparam ParticipantPadding 48
+skinparam defaultFontSize 24
+skinparam sequence {
+  ActorFontSize 24
+  ParticipantFontSize 24
+  MessageFontSize 23
+  GroupFontSize 23
+  ReferenceFontSize 23
+}
+skinparam BoxPadding 8
+
+actor "Viewer" as Viewer
+participant "Frontend" as FE
+participant "API Gateway" as GW
+
+box "Finance Service" #F5F5F5
+  participant "DepositsController" as Controller
+  participant "CreateDepositUseCase" as CreateUC
+  database "Finance DB" as DB
+  participant "PayOS Gateway Client" as PayOSClient
+end box
+
+participant "PayOS" as PayOS
+
+Viewer -> FE: Chọn gói nạp tiền
+FE -> GW: Gửi yêu cầu tạo giao dịch nạp
+GW -> GW: Kiểm tra phiên đăng nhập
+
+alt Chưa đăng nhập
+  GW --> FE: Từ chối yêu cầu
+  FE --> Viewer: Hiển thị yêu cầu đăng nhập
+else Đã đăng nhập
+  GW -> Controller: Chuyển tiếp yêu cầu nạp tiền
+  Controller -> CreateUC: Tạo giao dịch nạp
+  CreateUC -> DB: Lấy gói nạp tiền
+
+  alt Gói nạp không tồn tại hoặc không hoạt động
+    DB --> CreateUC: Không thỏa điều kiện
+    CreateUC --> Controller: Trả thông báo không tạo được giao dịch
+    Controller --> GW: Trả kết quả
+    GW --> FE: Trả kết quả
+    FE --> Viewer: Hiển thị lỗi
+  else Gói nạp hợp lệ
+    DB --> CreateUC: Trả thông tin gói nạp
+    CreateUC -> DB: Tìm hoặc tạo ví người dùng
+    DB --> CreateUC: Trả thông tin ví
+    CreateUC -> DB: Tạo giao dịch nạp đang chờ với mã thanh toán
+    DB --> CreateUC: Đã tạo giao dịch nạp
+    CreateUC -> PayOSClient: Tạo link thanh toán PayOS
+    PayOSClient -> PayOS: Gửi yêu cầu tạo link thanh toán
+
+    alt PayOS tạo link thất bại
+      PayOS --> PayOSClient: Trả kết quả thất bại
+      PayOSClient --> CreateUC: Báo lỗi tạo link
+      CreateUC --> Controller: Trả kết quả thất bại
+      Controller --> GW: Trả kết quả
+      GW --> FE: Trả kết quả
+      FE --> Viewer: Hiển thị lỗi thanh toán
+    else PayOS tạo link thành công
+      PayOS --> PayOSClient: Trả checkout url, QR và mã link
+      PayOSClient --> CreateUC: Trả thông tin link thanh toán
+      CreateUC -> DB: Gắn link thanh toán vào giao dịch nạp
+
+      alt Không lưu được link thanh toán
+        DB --> CreateUC: Cập nhật thất bại
+        CreateUC -> PayOSClient: Hủy link thanh toán vừa tạo
+        PayOSClient -> PayOS: Gửi yêu cầu hủy link
+        PayOS --> PayOSClient: Trả kết quả hủy link
+        CreateUC --> Controller: Trả kết quả thất bại
+        Controller --> GW: Trả kết quả
+        GW --> FE: Trả kết quả
+      else Lưu link thành công
+        DB --> CreateUC: Đã cập nhật giao dịch nạp
+        CreateUC --> Controller: Trả giao dịch nạp kèm link thanh toán
+        Controller --> GW: Trả kết quả
+        GW --> FE: Trả link thanh toán
+        FE --> Viewer: Điều hướng sang PayOS
+      end
+    end
+  end
+end
+
+@enduml

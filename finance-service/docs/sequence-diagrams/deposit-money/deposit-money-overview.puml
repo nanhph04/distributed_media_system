@@ -1,0 +1,72 @@
+@startuml
+title Biểu đồ tuần tự - Nạp tiền - Tổng quát luồng dữ liệu
+autonumber
+autoactivate on
+hide footbox
+
+skinparam maxMessageSize 260
+skinparam ParticipantPadding 48
+skinparam defaultFontSize 24
+skinparam sequence {
+  ActorFontSize 24
+  ParticipantFontSize 24
+  MessageFontSize 23
+  GroupFontSize 23
+  ReferenceFontSize 23
+}
+
+actor "Viewer" as Viewer
+participant "Frontend" as FE
+participant "API Gateway" as GW
+participant "Finance Service" as FS
+participant "PayOS" as PayOS
+
+Viewer -> FE: Chọn gói nạp tiền
+FE -> GW: Gửi yêu cầu tạo giao dịch nạp
+GW -> GW: Kiểm tra phiên đăng nhập
+
+alt Chưa đăng nhập
+  GW --> FE: Từ chối yêu cầu
+  FE --> Viewer: Hiển thị yêu cầu đăng nhập
+else Đã đăng nhập
+  ref over FE, GW, FS, PayOS
+    Chi tiết 1: Tạo giao dịch nạp và link thanh toán
+  end ref
+
+  GW -> FS: Chuyển tiếp yêu cầu nạp tiền
+  FS -> FS: Tạo giao dịch nạp đang chờ
+  FS -> PayOS: Tạo link thanh toán
+  PayOS --> FS: Trả link thanh toán
+  FS --> GW: Trả thông tin giao dịch nạp
+  GW --> FE: Trả link thanh toán
+  FE --> Viewer: Điều hướng sang PayOS
+end
+
+Viewer -> PayOS: Thanh toán
+
+ref over PayOS, FS
+  Chi tiết 2: Xử lý webhook và cộng coin vào ví
+end ref
+
+PayOS ->> FS: Gửi webhook kết quả thanh toán
+FS -> FS: Xác thực và hoàn tất giao dịch nạp
+FS --> PayOS: Xác nhận đã nhận webhook
+
+opt Webhook chậm hoặc không nhận được
+  ref over FS, PayOS
+    Chi tiết 3: Đối soát giao dịch nạp đang chờ
+  end ref
+
+  FS -> PayOS: Kiểm tra trạng thái thanh toán
+  PayOS --> FS: Trả trạng thái thanh toán
+  FS -> FS: Hoàn tất hoặc hủy giao dịch nạp
+end
+
+Viewer -> FE: Quay lại hệ thống
+FE -> GW: Yêu cầu xem số dư mới
+GW -> FS: Chuyển tiếp yêu cầu số dư
+FS --> GW: Trả số dư mới
+GW --> FE: Trả kết quả
+FE --> Viewer: Hiển thị số dư mới
+
+@enduml

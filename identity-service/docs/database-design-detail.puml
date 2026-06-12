@@ -1,0 +1,108 @@
+@startuml
+title Thiết kế database Identity Service - Chi tiết cột
+
+top to bottom direction
+
+skinparam TitleFontSize 40
+skinparam defaultFontSize 28
+skinparam ArrowFontSize 26
+skinparam ClassFontSize 28
+skinparam ClassAttributeFontSize 27
+skinparam ClassHeaderFontSize 30
+skinparam linetype ortho
+skinparam nodesep 70
+skinparam ranksep 60
+hide circle
+
+entity "accounts" as accounts {
+  * id : uuid <<PK>>
+  --
+  * email : varchar(255) <<UQ>>
+  * password_hash : varchar(255)
+  * role : enum(user, admin)
+  * status : enum(active, suspended)
+  email_verified_at : timestamptz
+  password_changed_at : timestamptz
+  locked_reason : varchar(500)
+  locked_at : timestamptz
+  * created_at : timestamptz
+  * updated_at : timestamptz
+}
+
+entity "user_profiles" as profiles {
+  * user_id : uuid <<PK, FK>>
+  --
+  display_name : varchar(100)
+  avatar_url : varchar(2048)
+  avatar_object_key : varchar(1024)
+  bio : text
+  phone_number : varchar(20)
+  gender : enum(male, female, other)
+  date_of_birth : date
+  * created_at : timestamptz
+  * updated_at : timestamptz
+}
+
+entity "refresh_sessions" as sessions {
+  * id : uuid <<PK>>
+  --
+  * user_id : uuid <<FK>>
+  * refresh_token_hash : varchar(64) <<UQ>>
+  device_name : varchar(255)
+  user_agent : text
+  ip_address : varchar(45)
+  * expires_at : timestamptz
+  revoked_at : timestamptz
+  replaced_by_session_id : uuid <<FK>>
+  * created_at : timestamptz
+  * updated_at : timestamptz
+}
+
+entity "otp_sessions" as otp_sessions {
+  * id : uuid <<PK>>
+  --
+  account_id : uuid <<FK>>
+  * email : varchar(255)
+  * purpose : enum(register, forgot_password)
+  * otp_hash : varchar(64)
+  * verify_attempts : integer
+  * max_attempts : integer
+  * expires_at : timestamptz
+  consumed_at : timestamptz
+  * created_at : timestamptz
+}
+
+entity "otp_rate_limits" as otp_limits {
+  * id : uuid <<PK>>
+  --
+  * action : varchar(64)
+  * scope : enum(email, ip)
+  * rate_key : varchar(255)
+  * attempts : integer
+  * window_expires_at : timestamptz
+  * created_at : timestamptz
+  * updated_at : timestamptz
+}
+
+entity "outbox_messages" as outbox {
+  * id : uuid <<PK>>
+  --
+  * event_id : uuid <<UQ>>
+  * event_type : varchar(255)
+  * aggregate_id : varchar(255)
+  * payload : jsonb
+  * status : enum(pending, publishing, published, failed)
+  * attempts : integer
+  last_error : text
+  * next_attempt_at : timestamptz
+  published_at : timestamptz
+  * created_at : timestamptz
+  * updated_at : timestamptz
+}
+
+accounts ||--|| profiles
+accounts ||--o{ sessions
+accounts ||--o{ otp_sessions
+sessions ||--o| sessions
+
+@enduml

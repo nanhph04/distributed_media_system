@@ -1,0 +1,85 @@
+@startuml
+title Biểu đồ hoạt động - Duyệt yêu cầu rút tiền - Tổng quát
+
+skinparam TitleFontSize 38
+skinparam defaultFontSize 34
+skinparam ArrowFontSize 32
+skinparam ActivityFontSize 34
+skinparam DiamondFontSize 32
+skinparam PartitionFontSize 34
+
+|Admin|
+start
+:Mở màn hình duyệt yêu cầu rút tiền;
+:Lọc danh sách nếu cần;
+
+|Frontend|
+:Gửi yêu cầu lấy danh sách rút tiền;
+
+|API Gateway|
+:Kiểm tra phiên đăng nhập và quyền admin;
+
+if (Là admin hợp lệ?) then (Có)
+  :Chuyển yêu cầu sang Finance Service;
+else (Không)
+  |Frontend|
+  :Hiển thị thông báo không có quyền;
+  |Admin|
+  :Xem thông báo;
+  stop
+endif
+
+|Finance Service|
+:Lấy danh sách yêu cầu rút tiền;
+:Trả danh sách về frontend;
+
+|Frontend|
+:Hiển thị danh sách yêu cầu;
+
+|Admin|
+:Chọn yêu cầu cần xử lý;
+:Xem chi tiết và đối chiếu thông tin;
+
+if (Quyết định xử lý?) then (Duyệt)
+  :Xác nhận đã chuyển tiền;
+else (Từ chối)
+  :Nhập lý do từ chối;
+endif
+
+|Frontend|
+:Gửi yêu cầu xử lý rút tiền;
+
+|API Gateway|
+:Kiểm tra lại quyền admin;
+
+if (Là admin hợp lệ?) then (Có)
+  :Chuyển yêu cầu sang Finance Service;
+else (Không)
+  |Frontend|
+  :Hiển thị thông báo không có quyền;
+  |Admin|
+  :Xem thông báo;
+  stop
+endif
+
+|Finance Service|
+:Kiểm tra yêu cầu, ví và giao dịch liên quan;
+
+if (Yêu cầu có thể xử lý?) then (Có)
+  :Cập nhật yêu cầu rút tiền theo quyết định admin;
+else (Không)
+  |Frontend|
+  :Hiển thị lỗi xử lý rút tiền;
+  |Admin|
+  :Xem thông báo lỗi;
+  stop
+endif
+
+|Frontend|
+:Cập nhật trạng thái yêu cầu rút tiền;
+
+|Admin|
+:Xem kết quả duyệt yêu cầu;
+stop
+
+@enduml

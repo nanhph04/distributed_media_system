@@ -1,0 +1,70 @@
+@startuml
+title Biểu đồ tuần tự - Duyệt yêu cầu rút tiền - Chi tiết 2: Hoàn tất yêu cầu
+autonumber
+autoactivate on
+hide footbox
+
+skinparam maxMessageSize 260
+skinparam ParticipantPadding 48
+skinparam defaultFontSize 24
+skinparam sequence {
+  ActorFontSize 24
+  ParticipantFontSize 24
+  MessageFontSize 23
+  GroupFontSize 23
+  ReferenceFontSize 23
+}
+skinparam BoxPadding 8
+
+actor "Admin" as Admin
+participant "Frontend" as FE
+participant "API Gateway" as GW
+
+box "Finance Service" #F5F5F5
+  participant "WithdrawalsController" as Controller
+  participant "CompleteWithdrawalUseCase" as CompleteUC
+  database "Finance DB" as DB
+end box
+
+Admin -> FE: Nhập mã chuyển khoản và chọn hoàn tất
+FE -> GW: Gửi yêu cầu hoàn tất rút tiền
+GW -> GW: Kiểm tra phiên đăng nhập và quyền admin
+
+alt Không phải admin
+  GW --> FE: Từ chối yêu cầu
+  FE --> Admin: Hiển thị thông báo không có quyền
+else Là admin
+  GW -> Controller: Chuyển tiếp yêu cầu hoàn tất
+  Controller -> CompleteUC: Xử lý hoàn tất yêu cầu
+  CompleteUC -> CompleteUC: Kiểm tra dữ liệu và quyền admin
+
+  alt Dữ liệu không hợp lệ
+    CompleteUC --> Controller: Trả thông báo không thể xử lý
+    Controller --> GW: Trả kết quả
+    GW --> FE: Trả kết quả
+    FE --> Admin: Hiển thị lỗi xử lý rút tiền
+  else Dữ liệu hợp lệ
+    CompleteUC -> DB: Khóa yêu cầu rút tiền, ví và giao dịch
+
+    alt Thiếu yêu cầu, ví hoặc giao dịch
+      DB --> CompleteUC: Không đủ dữ liệu để xử lý
+      CompleteUC --> Controller: Trả thông báo không thể hoàn tất
+      Controller --> GW: Trả kết quả
+      GW --> FE: Trả kết quả
+      FE --> Admin: Hiển thị lỗi xử lý rút tiền
+    else Dữ liệu đầy đủ
+      DB --> CompleteUC: Trả yêu cầu, ví và giao dịch
+      CompleteUC -> CompleteUC: Đánh dấu yêu cầu completed
+      CompleteUC -> CompleteUC: Trừ coin khỏi số dư tạm giữ
+      CompleteUC -> CompleteUC: Đánh dấu giao dịch completed
+      CompleteUC -> DB: Lưu yêu cầu, ví và giao dịch
+      DB --> CompleteUC: Đã lưu thay đổi
+      CompleteUC --> Controller: Trả thông tin yêu cầu đã hoàn tất
+      Controller --> GW: Trả kết quả
+      GW --> FE: Trả kết quả
+      FE --> Admin: Hiển thị yêu cầu đã hoàn tất
+    end
+  end
+end
+
+@enduml

@@ -1,0 +1,86 @@
+@startuml
+title Thiết kế database Finance Service - Thanh toán và doanh thu
+
+left to right direction
+
+skinparam TitleFontSize 40
+skinparam defaultFontSize 28
+skinparam ArrowFontSize 26
+skinparam ClassFontSize 28
+skinparam ClassAttributeFontSize 27
+skinparam ClassHeaderFontSize 30
+skinparam linetype ortho
+skinparam nodesep 80
+skinparam ranksep 70
+hide circle
+
+entity "wallets" as wallets {
+  * id : uuid <<PK>>
+  --
+  * user_id : varchar(128)
+  * type : enum
+  * balance : integer
+  * frozen_balance : integer
+}
+
+entity "ledger_transactions" as transactions {
+  * id : uuid <<PK>>
+  --
+  * type : enum(video_purchase, member_subscription, channel_revenue, system_revenue, refund)
+  * asset_type : coin
+  * amount : integer
+  * status : enum
+  from_wallet_id : uuid <<FK>>
+  to_wallet_id : uuid <<FK>>
+  reference_id : varchar(128)
+  metadata : jsonb
+}
+
+entity "payment_idempotency_records" as idem {
+  * id : uuid <<PK>>
+  --
+  * user_id : varchar(128)
+  * idempotency_key : varchar(255)
+  * request_hash : varchar(64)
+  * response : jsonb
+}
+
+entity "payment_revenue_settlements" as settlements {
+  * id : uuid <<PK>>
+  --
+  * wallet_id : uuid <<FK>>
+  * transaction_id : uuid <<FK, UQ>>
+  * amount : integer
+  * status : enum(pending, released, reversed)
+  * service_type : varchar(32)
+  * service_id : varchar(128)
+  * release_after : timestamptz
+  released_at : timestamptz
+  metadata : jsonb
+}
+
+entity "channel_payout_holds" as holds {
+  * channel_id : varchar(64) <<PK>>
+  --
+  * channel_owner_id : varchar(64)
+  * status : enum(active, inactive)
+  reason : text
+  changed_by_admin_id : varchar(64)
+}
+
+wallets ||--o{ transactions
+transactions ||--o{ settlements
+wallets ||--o{ settlements
+holds }o--|| wallets : "owner wallet"
+
+note bottom of idem
+  Unique index:
+  (user_id, idempotency_key)
+end note
+
+note bottom of holds
+  Khi kênh bị khóa,
+  payout của chủ kênh bị giữ.
+end note
+
+@enduml

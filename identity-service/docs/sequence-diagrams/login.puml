@@ -1,0 +1,31 @@
+@startuml
+title Sequence Diagram - Dang nhap
+autonumber
+autoactivate on
+
+actor "Nguoi dung" as User
+participant "Frontend" as FE
+participant "API Gateway" as GW
+participant "Identity Service" as IDS
+
+User -> FE: Nhap email va mat khau
+FE -> GW: Gui yeu cau dang nhap
+GW -> IDS: Chuyen tiep yeu cau
+IDS -> IDS: Kiem tra thong tin dang nhap
+
+alt Thong tin khong hop le
+  IDS --> GW: Thong bao dang nhap that bai
+  GW --> FE: Tra ket qua
+  FE --> User: Hien thi loi dang nhap
+else Tai khoan chua du dieu kien
+  IDS --> GW: Thong bao tai khoan khong the dang nhap
+  GW --> FE: Tra ket qua
+  FE --> User: Hien thi thong bao
+else Dang nhap thanh cong
+  IDS -> IDS: Tao phien dang nhap
+  IDS --> GW: Tra ket qua dang nhap
+  GW --> FE: Tra ket qua
+  FE --> User: Chuyen vao he thong
+end
+
+@enduml

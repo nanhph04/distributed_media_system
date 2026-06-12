@@ -1,0 +1,40 @@
+@startuml
+title Biểu đồ hoạt động - Rút tiền - Chi tiết 2: Tạo yêu cầu chờ duyệt
+
+skinparam TitleFontSize 38
+skinparam defaultFontSize 34
+skinparam ArrowFontSize 32
+skinparam ActivityFontSize 34
+skinparam DiamondFontSize 32
+skinparam PartitionFontSize 34
+
+|Finance Service|
+start
+:Nhận yêu cầu đã qua kiểm tra;
+:Lấy tỉ giá và phần trăm phí rút;
+:Tính số tiền trước phí;
+:Tính phí rút;
+:Tính số tiền thực nhận;
+
+|Ví người dùng|
+:Tạm giữ số coin cần rút;
+
+|Finance Service|
+:Tạo yêu cầu rút tiền trạng thái chờ duyệt;
+:Gắn thông tin ngân hàng nhận tiền;
+:Kiểm tra giao dịch rút tiền đã tồn tại chưa;
+
+if (Chưa có giao dịch trùng?) then (Có)
+  :Tạo giao dịch rút tiền;
+else (Không)
+  :Từ chối do giao dịch đã tồn tại;
+  stop
+endif
+
+:Lưu ví đã cập nhật;
+:Lưu yêu cầu rút tiền;
+:Lưu giao dịch rút tiền;
+:Trả thông tin yêu cầu rút tiền;
+stop
+
+@enduml

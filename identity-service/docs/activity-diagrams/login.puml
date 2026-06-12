@@ -1,0 +1,51 @@
+@startuml
+title Activity Diagram - Dang nhap
+
+|Nguoi dung|
+start
+:Nhap email va mat khau;
+:Chon dang nhap;
+
+|Frontend|
+:Gui yeu cau dang nhap;
+
+|API Gateway|
+:Chuyen tiep yeu cau;
+
+|Identity Service|
+:Kiem tra thong tin dang nhap;
+
+if (Thong tin hop le?) then (Khong)
+  :Tra thong bao dang nhap that bai;
+  |Frontend|
+  :Hien thi loi dang nhap;
+  |Nguoi dung|
+  :Xem thong bao loi;
+  stop
+else (Co)
+endif
+
+if (Tai khoan duoc phep dang nhap?) then (Khong)
+  :Tra thong bao tai khoan chua du dieu kien;
+  |Frontend|
+  :Hien thi thong bao;
+  |Nguoi dung|
+  :Xem thong bao;
+  stop
+else (Co)
+endif
+
+:Tao phien dang nhap;
+
+|API Gateway|
+:Tra ket qua ve frontend;
+
+|Frontend|
+:Luu trang thai dang nhap;
+:Chuyen nguoi dung vao he thong;
+
+|Nguoi dung|
+:Su dung he thong;
+stop
+
+@enduml

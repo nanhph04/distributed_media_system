@@ -1,0 +1,57 @@
+@startuml
+title Biểu đồ hoạt động - Duyệt yêu cầu rút tiền - Chi tiết 2: Duyệt hoàn tất
+
+skinparam TitleFontSize 38
+skinparam defaultFontSize 34
+skinparam ArrowFontSize 32
+skinparam ActivityFontSize 34
+skinparam DiamondFontSize 32
+skinparam PartitionFontSize 34
+
+|Admin|
+start
+:Xác nhận đã chuyển tiền;
+:Nhập mã tham chiếu nếu có;
+
+|Frontend|
+:Gửi yêu cầu duyệt hoàn tất;
+
+|Finance Service|
+:Kiểm tra quyền admin;
+:Tìm và khóa yêu cầu rút tiền;
+
+if (Yêu cầu tồn tại?) then (Có)
+  :Tìm và khóa ví liên quan;
+else (Không)
+  :Trả thông báo không tìm thấy yêu cầu;
+  stop
+endif
+
+if (Tìm thấy ví?) then (Có)
+  :Tìm giao dịch rút tiền;
+else (Không)
+  :Trả thông báo không tìm thấy ví;
+  stop
+endif
+
+if (Tìm thấy giao dịch?) then (Có)
+  :Kiểm tra trạng thái yêu cầu;
+else (Không)
+  :Trả thông báo thiếu giao dịch rút tiền;
+  stop
+endif
+
+if (Yêu cầu đang chờ duyệt?) then (Có)
+  :Chuyển yêu cầu sang đã hoàn tất;
+  :Trừ coin khỏi số dư tạm giữ;
+  :Đánh dấu giao dịch rút tiền hoàn tất;
+else (Không)
+  :Trả thông báo yêu cầu đã được xử lý;
+  stop
+endif
+
+:Lưu thay đổi ví, yêu cầu và giao dịch;
+:Trả kết quả duyệt hoàn tất;
+stop
+
+@enduml

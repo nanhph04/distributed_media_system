@@ -1,0 +1,56 @@
+@startuml
+title Biểu đồ tuần tự - Mở khóa video - Chi tiết 3: Xử lý sự kiện thanh toán thành công
+autonumber
+autoactivate on
+hide footbox
+
+skinparam maxMessageSize 220
+skinparam ParticipantPadding 36
+skinparam defaultFontSize 30
+skinparam sequence {
+  ActorFontSize 18
+  ParticipantFontSize 18
+  MessageFontSize 17
+  GroupFontSize 17
+  ReferenceFontSize 17
+}
+skinparam BoxPadding 8
+
+participant "Finance Service" as FS
+queue "Message Broker" as Broker
+
+box "Media Service" #F5F5F5
+  participant "VideoPaymentConsumer" as Consumer
+  participant "HandleVideoPaymentSuccessUseCase" as HandleUC
+  participant "UnlockVideoUseCase" as UnlockUC
+  participant "Idempotency Cache" as Cache
+  database "Media DB" as DB
+end box
+
+FS ->> Broker: Phát sự kiện video.payment.success
+Broker ->> Consumer: Chuyển sự kiện thanh toán thành công
+Consumer -> HandleUC: Xử lý sự kiện
+HandleUC -> Cache: Đánh dấu sự kiện đã xử lý theo eventId
+
+alt Sự kiện đã xử lý trước đó
+  Cache --> HandleUC: Không cho xử lý lại
+  HandleUC --> Consumer: Bỏ qua sự kiện trùng
+else Sự kiện mới
+  Cache --> HandleUC: Cho phép xử lý
+  HandleUC -> UnlockUC: Ghi nhận quyền mở khóa
+  UnlockUC -> DB: Kiểm tra unlock đã tồn tại
+
+  alt Đã tồn tại
+    DB --> UnlockUC: Đã có quyền mở khóa
+    UnlockUC --> HandleUC: Bỏ qua ghi trùng
+  else Chưa tồn tại
+    DB --> UnlockUC: Chưa có quyền mở khóa
+    UnlockUC -> DB: Lưu quyền mở khóa video
+    DB --> UnlockUC: Đã lưu
+    UnlockUC --> HandleUC: Đã ghi nhận
+  end
+
+  HandleUC --> Consumer: Hoàn tất xử lý sự kiện
+end
+
+@enduml

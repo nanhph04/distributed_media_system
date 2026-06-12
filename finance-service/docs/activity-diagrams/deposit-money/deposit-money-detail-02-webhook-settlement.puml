@@ -1,0 +1,51 @@
+@startuml
+title Biểu đồ hoạt động - Nạp tiền - Chi tiết 2: Webhook hoàn tất nạp tiền
+
+skinparam defaultFontSize 34
+skinparam ArrowFontSize 32
+skinparam ActivityFontSize 34
+skinparam DiamondFontSize 32
+skinparam PartitionFontSize 34
+
+|PayOS|
+start
+:Gửi webhook kết quả thanh toán;
+
+|Finance Service|
+:Kiểm tra chữ ký và trạng thái thanh toán;
+
+if (Webhook hợp lệ và thanh toán thành công?) then (Có)
+  :Tìm giao dịch nạp theo mã thanh toán;
+else (Không)
+  :Ghi nhận webhook bị bỏ qua;
+  stop
+endif
+
+if (Tìm thấy giao dịch nạp?) then (Có)
+  :Khóa giao dịch để xử lý;
+else (Không)
+  :Trả kết quả không xử lý được;
+  stop
+endif
+
+:Kiểm tra cổng thanh toán, số tiền và mã thanh toán;
+
+if (Thông tin thanh toán khớp?) then (Có)
+  :Tìm ví người dùng;
+else (Không)
+  :Từ chối hoàn tất giao dịch nạp;
+  stop
+endif
+
+if (Giao dịch đã hoàn tất trước đó?) then (Có)
+  :Bỏ qua webhook trùng;
+else (Không)
+  :Cộng coin vào ví người dùng;
+  :Ghi nhận lịch sử giao dịch;
+  :Đánh dấu giao dịch nạp hoàn tất;
+endif
+
+:Trả kết quả đã nhận webhook;
+stop
+
+@enduml

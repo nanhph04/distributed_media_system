@@ -1,0 +1,84 @@
+@startuml
+title Biểu đồ tuần tự - Xem video - Chi tiết 3: Cập nhật tiến độ và lượt xem
+autonumber
+autoactivate on
+hide footbox
+
+skinparam maxMessageSize 220
+skinparam ParticipantPadding 36
+skinparam defaultFontSize 18
+skinparam sequence {
+  ActorFontSize 18
+  ParticipantFontSize 18
+  MessageFontSize 17
+  GroupFontSize 17
+  ReferenceFontSize 17
+}
+skinparam BoxPadding 8
+
+actor "Người xem" as Viewer
+participant "Frontend" as FE
+participant "API Gateway" as GW
+
+box "Media Service" #F5F5F5
+  participant "VideosController" as VC
+  participant "UpdateProgressUseCase" as ProgressUC
+  participant "VideoWatchAccessService" as Access
+  participant "RecordVideoViewUseCase" as ViewUC
+  database "Media DB" as DB
+  participant "Idempotency Cache" as Idempotency
+end box
+
+queue "Message Broker" as Broker
+
+loop Định kỳ khi người xem đang xem
+  Viewer -> FE: Tiếp tục xem video
+  FE -> GW: Gửi tiến độ xem hiện tại
+  GW -> GW: Kiểm tra phiên đăng nhập
+
+  alt Chưa đăng nhập
+    GW --> FE: Từ chối yêu cầu
+    FE --> Viewer: Hiển thị thông báo đăng nhập lại
+  else Đã đăng nhập
+    GW -> VC: Chuyển tiếp tiến độ xem
+    VC -> ProgressUC: Xử lý cập nhật tiến độ
+    ProgressUC -> DB: Lấy video và tiến độ hiện có
+    DB --> ProgressUC: Trả dữ liệu cần thiết
+    ProgressUC -> Access: Kiểm tra lại quyền xem
+    Access -> DB: Lấy trạng thái kênh, hội viên và mở khóa
+
+    alt Không còn quyền xem
+      DB --> Access: Không thỏa điều kiện
+      Access --> ProgressUC: Từ chối cập nhật
+      ProgressUC --> VC: Trả kết quả không hợp lệ
+      VC --> GW: Trả kết quả
+      GW --> FE: Trả kết quả
+      FE --> Viewer: Hiển thị thông báo phù hợp
+    else Còn quyền xem
+      DB --> Access: Thỏa điều kiện
+      Access --> ProgressUC: Cho phép cập nhật
+      ProgressUC -> DB: Lưu tiến độ mới
+      DB --> ProgressUC: Đã lưu tiến độ
+
+      opt Đạt ngưỡng tính lượt xem
+        ProgressUC -> ViewUC: Ghi nhận lượt xem
+        ViewUC -> Idempotency: Kiểm tra trùng lặp theo người xem và video
+
+        alt Chưa ghi nhận gần đây
+          Idempotency --> ViewUC: Cho phép ghi nhận
+          ViewUC ->> Broker: Phát sự kiện video.viewed
+        else Đã ghi nhận gần đây
+          Idempotency --> ViewUC: Bỏ qua ghi nhận trùng
+        end
+
+        ViewUC --> ProgressUC: Hoàn tất
+      end
+
+      ProgressUC --> VC: Trả kết quả cập nhật tiến độ
+      VC --> GW: Trả kết quả
+      GW --> FE: Trả kết quả
+    end
+  end
+end
+
+@enduml

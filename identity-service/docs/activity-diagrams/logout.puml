@@ -1,0 +1,36 @@
+@startuml
+title Activity Diagram - Dang xuat
+
+|Nguoi dung|
+start
+:Chon dang xuat;
+
+|Frontend|
+:Gui yeu cau dang xuat;
+
+|API Gateway|
+:Chuyen tiep yeu cau;
+
+|Identity Service|
+:Kiem tra phien dang nhap;
+
+if (Phien con hieu luc?) then (Co)
+  :Huy phien dang nhap;
+else (Khong)
+  :Ghi nhan nguoi dung da dang xuat;
+endif
+
+:Tra ket qua dang xuat thanh cong;
+
+|API Gateway|
+:Tra ket qua ve frontend;
+
+|Frontend|
+:Xoa trang thai dang nhap;
+:Chuyen ve man hinh dang nhap;
+
+|Nguoi dung|
+:Xem man hinh dang nhap;
+stop
+
+@enduml

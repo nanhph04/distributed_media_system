@@ -1,0 +1,75 @@
+@startuml
+title Biểu đồ tuần tự - Duyệt yêu cầu rút tiền - Chi tiết 1: Xem danh sách và chi tiết
+autonumber
+autoactivate on
+hide footbox
+
+skinparam maxMessageSize 260
+skinparam ParticipantPadding 48
+skinparam defaultFontSize 24
+skinparam sequence {
+  ActorFontSize 24
+  ParticipantFontSize 24
+  MessageFontSize 23
+  GroupFontSize 23
+  ReferenceFontSize 23
+}
+skinparam BoxPadding 8
+
+actor "Admin" as Admin
+participant "Frontend" as FE
+participant "API Gateway" as GW
+
+box "Finance Service" #F5F5F5
+  participant "WithdrawalsController" as Controller
+  participant "ListAdminWithdrawalsUseCase" as ListUC
+  participant "GetAdminWithdrawalDetailUseCase" as DetailUC
+  database "Finance DB" as DB
+end box
+
+Admin -> FE: Mở màn hình yêu cầu rút tiền
+FE -> GW: Yêu cầu danh sách rút tiền
+GW -> GW: Kiểm tra phiên đăng nhập và quyền admin
+
+alt Không phải admin
+  GW --> FE: Từ chối yêu cầu
+  FE --> Admin: Hiển thị thông báo không có quyền
+else Là admin
+  GW -> Controller: Chuyển tiếp yêu cầu danh sách
+  Controller -> ListUC: Lấy danh sách yêu cầu rút tiền
+  ListUC -> DB: Truy vấn danh sách theo bộ lọc
+  DB --> ListUC: Trả danh sách yêu cầu
+  ListUC --> Controller: Trả dữ liệu phân trang
+  Controller --> GW: Trả danh sách rút tiền
+  GW --> FE: Trả kết quả
+  FE --> Admin: Hiển thị danh sách yêu cầu
+end
+
+Admin -> FE: Chọn một yêu cầu rút tiền
+FE -> GW: Yêu cầu chi tiết rút tiền
+GW -> GW: Kiểm tra phiên đăng nhập và quyền admin
+
+alt Không phải admin
+  GW --> FE: Từ chối yêu cầu
+  FE --> Admin: Hiển thị thông báo không có quyền
+else Là admin
+  GW -> Controller: Chuyển tiếp yêu cầu chi tiết
+  Controller -> DetailUC: Lấy chi tiết yêu cầu rút tiền
+  DetailUC -> DB: Tìm yêu cầu theo mã yêu cầu
+
+  alt Không tìm thấy yêu cầu
+    DB --> DetailUC: Không có dữ liệu
+    DetailUC --> Controller: Trả thông báo không tìm thấy
+    Controller --> GW: Trả kết quả
+    GW --> FE: Trả kết quả
+    FE --> Admin: Hiển thị lỗi
+  else Tìm thấy yêu cầu
+    DB --> DetailUC: Trả thông tin yêu cầu
+    DetailUC --> Controller: Trả chi tiết yêu cầu
+    Controller --> GW: Trả kết quả
+    GW --> FE: Trả kết quả
+    FE --> Admin: Hiển thị chi tiết yêu cầu
+  end
+end
+
+@enduml

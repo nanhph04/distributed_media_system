@@ -1,0 +1,92 @@
+@startuml
+title Thiết kế database Finance Service - Nạp tiền và rút tiền
+
+left to right direction
+
+skinparam TitleFontSize 40
+skinparam defaultFontSize 28
+skinparam ArrowFontSize 26
+skinparam ClassFontSize 28
+skinparam ClassAttributeFontSize 27
+skinparam ClassHeaderFontSize 30
+skinparam linetype ortho
+skinparam nodesep 80
+skinparam ranksep 70
+hide circle
+
+entity "deposit_packages" as packages {
+  * id : uuid <<PK>>
+  --
+  * code : varchar(64) <<UQ>>
+  * name : varchar(255)
+  * money_amount : integer
+  * base_coin_amount : integer
+  * bonus_coin_amount : integer
+  * total_coin_amount : integer
+  * sort_order : integer
+  * is_active : boolean
+}
+
+entity "deposits" as deposits {
+  * id : uuid <<PK>>
+  --
+  * wallet_id : uuid <<FK>>
+  * user_id : varchar(128)
+  * package_id : uuid <<FK>>
+  * money_amount : integer
+  * total_coin_amount : integer
+  * gateway : varchar(64)
+  * status : enum(pending, processing, completed, failed)
+  payment_code : varchar(9) <<UQ>>
+  gateway_transaction_id : varchar(128)
+  checkout_url : text
+  metadata : jsonb
+  requested_at : timestamptz
+  completed_at : timestamptz
+}
+
+entity "withdrawals" as withdrawals {
+  * id : uuid <<PK>>
+  --
+  * wallet_id : uuid <<FK>>
+  * user_id : varchar(128)
+  * coin_amount : integer
+  * gross_money_amount : integer
+  * fee_amount : integer
+  * money_amount : integer
+  * exchange_rate : integer
+  * status : enum(pending, completed, rejected, cancelled)
+  bank_code : varchar(64)
+  account_number : varchar(64)
+  account_holder_name : varchar(255)
+  processed_by_admin_id : varchar(128)
+  transfer_reference : varchar(128)
+  rejection_reason : text
+  requested_at : timestamptz
+  completed_at : timestamptz
+}
+
+entity "ledger_transactions" as transactions {
+  * id : uuid <<PK>>
+  --
+  * type : enum(deposit, withdrawal)
+  * amount : integer
+  * status : enum
+  reference_id : varchar(128)
+}
+
+packages ||--o{ deposits
+deposits ||--o| transactions : "tạo bút toán nạp"
+withdrawals ||--o| transactions : "tạo bút toán rút"
+
+note bottom of deposits
+  Nạp tiền hoàn tất sẽ cộng coin vào ví
+  và tạo transaction loại deposit.
+end note
+
+note bottom of withdrawals
+  Khi tạo yêu cầu rút, coin chuyển
+  từ balance sang frozen_balance.
+end note
+
+@enduml

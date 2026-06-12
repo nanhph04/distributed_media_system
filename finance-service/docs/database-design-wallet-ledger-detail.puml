@@ -1,0 +1,82 @@
+@startuml
+title Thiết kế database Finance Service - Ví và sổ cái
+
+skinparam TitleFontSize 40
+skinparam defaultFontSize 28
+skinparam ArrowFontSize 26
+skinparam ClassFontSize 28
+skinparam ClassAttributeFontSize 27
+skinparam ClassHeaderFontSize 30
+skinparam linetype polyline
+skinparam nodesep 120
+skinparam ranksep 120
+hide circle
+
+entity "wallets\n(ví nguồn)" as source_wallet {
+  * id : uuid <<PK>>
+  --
+  * user_id : varchar(128) <<UQ>>
+  * type : enum(user, system_revenue)
+  * balance : integer
+  * frozen_balance : integer
+  * status : enum(active, frozen, closed)
+  * created_at : timestamptz
+  * updated_at : timestamptz
+}
+
+entity "ledger_transactions" as transactions {
+  * id : uuid <<PK>>
+  --
+  * type : enum
+  * asset_type : enum(money, coin)
+  * amount : integer
+  * status : enum(pending, completed, failed, cancelled)
+  from_wallet_id : uuid <<FK>>
+  to_wallet_id : uuid <<FK>>
+  initiated_by_user_id : varchar(128)
+  reference_id : varchar(128)
+  description : text
+  failure_reason : text
+  metadata : jsonb
+  completed_at : timestamptz
+  failed_at : timestamptz
+  cancelled_at : timestamptz
+  * created_at : timestamptz
+  * updated_at : timestamptz
+}
+
+entity "wallets\n(ví nhận)" as target_wallet {
+  * id : uuid <<PK>>
+  --
+  * user_id : varchar(128) <<UQ>>
+  * type : enum(user, system_revenue)
+  * balance : integer
+  * frozen_balance : integer
+  * status : enum(active, frozen, closed)
+  * created_at : timestamptz
+  * updated_at : timestamptz
+}
+
+entity "processed_wallet_events" as processed {
+  * event_id : varchar(128) <<PK>>
+  --
+  * processed_at : timestamptz
+  * created_at : timestamptz
+}
+
+source_wallet ||--o{ transactions : "from_wallet_id"
+transactions }o--|| target_wallet : "to_wallet_id"
+processed -[hidden]down- transactions
+
+note bottom of source_wallet
+  balance: coin khả dụng.
+  frozen_balance: coin đang bị giữ
+  do rút tiền hoặc doanh thu chờ release.
+end note
+
+note bottom of processed
+  Chống xử lý trùng event từ service khác,
+  ví dụ user.status.changed.
+end note
+
+@enduml

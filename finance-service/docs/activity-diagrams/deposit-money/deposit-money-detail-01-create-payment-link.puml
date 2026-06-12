@@ -1,0 +1,52 @@
+@startuml
+title Biểu đồ hoạt động - Nạp tiền - Chi tiết 1: Tạo link thanh toán
+
+skinparam defaultFontSize 34
+skinparam ArrowFontSize 32
+skinparam ActivityFontSize 34
+skinparam DiamondFontSize 32
+skinparam PartitionFontSize 34
+
+|Finance Service|
+start
+:Nhận yêu cầu tạo giao dịch nạp;
+:Tìm gói nạp theo lựa chọn của người dùng;
+
+if (Gói nạp tồn tại và đang hoạt động?) then (Có)
+  :Tìm ví của người dùng;
+else (Không)
+  :Trả thông báo gói nạp không hợp lệ;
+  stop
+endif
+
+if (Người dùng đã có ví?) then (Có)
+  :Sử dụng ví hiện tại;
+else (Không)
+  :Tạo ví mới cho người dùng;
+endif
+
+:Sinh mã thanh toán;
+:Kiểm tra mã thanh toán chưa bị trùng;
+
+if (Mã thanh toán hợp lệ?) then (Có)
+  :Tạo giao dịch nạp ở trạng thái chờ;
+else (Không)
+  :Thử sinh mã thanh toán khác;
+endif
+
+|PayOS|
+:Tạo link thanh toán theo mã và số tiền;
+
+if (Tạo link thành công?) then (Có)
+  |Finance Service|
+  :Lưu link thanh toán vào giao dịch nạp;
+  :Trả link thanh toán cho frontend;
+else (Không)
+  |Finance Service|
+  :Giữ giao dịch ở trạng thái chờ;
+  :Trả thông báo không tạo được link thanh toán;
+endif
+
+stop
+
+@enduml

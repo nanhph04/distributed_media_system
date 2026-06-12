@@ -1,0 +1,87 @@
+@startuml
+title Biểu đồ tuần tự - Xem video - Tổng quát luồng dữ liệu
+autonumber
+autoactivate on
+hide footbox
+
+skinparam maxMessageSize 220
+skinparam ParticipantPadding 36
+skinparam defaultFontSize 18
+skinparam sequence {
+  ActorFontSize 18
+  ParticipantFontSize 18
+  MessageFontSize 17
+  GroupFontSize 17
+  ReferenceFontSize 17
+}
+
+actor "Người xem" as Viewer
+participant "Frontend" as FE
+participant "API Gateway" as GW
+participant "Media Service" as MS
+participant "Object Storage" as Storage
+queue "Message Broker" as Broker
+
+Viewer -> FE: Chọn xem video
+FE -> GW: Gửi yêu cầu bắt đầu phát video
+GW -> GW: Kiểm tra phiên đăng nhập
+
+alt Chưa đăng nhập
+  GW --> FE: Từ chối yêu cầu
+  FE --> Viewer: Hiển thị yêu cầu đăng nhập
+else Đã đăng nhập
+  ref over FE, GW, MS
+    Chi tiết 1: Khởi tạo phiên phát
+  end ref
+
+  GW -> MS: Chuyển tiếp yêu cầu phát video
+  MS -> MS: Kiểm tra video, kênh, quyền xem và tiến độ xem
+
+  alt Video không khả dụng hoặc người xem không có quyền
+    MS --> GW: Trả kết quả không thể phát video
+    GW --> FE: Trả kết quả
+    FE --> Viewer: Hiển thị thông báo phù hợp
+  else Được phép xem
+    MS --> GW: Trả token phát video, đường dẫn phát và vị trí xem gần nhất
+    GW --> FE: Trả thông tin phát video
+    FE --> Viewer: Mở trình phát video
+
+    ref over FE, GW, MS, Storage
+      Chi tiết 2: Tải playlist và segment
+    end ref
+
+    FE -> GW: Yêu cầu master playlist
+    GW -> MS: Chuyển tiếp yêu cầu playlist
+    MS -> Storage: Đọc playlist đã xử lý
+    Storage --> MS: Trả playlist
+    MS --> GW: Trả playlist đã gắn token
+    GW --> FE: Trả playlist cho trình phát
+
+    loop Trong khi người xem xem video
+      FE -> GW: Yêu cầu segment video
+      GW -> MS: Chuyển tiếp yêu cầu segment
+      MS -> Storage: Đọc segment từ kho lưu trữ
+      Storage --> MS: Trả segment video
+      MS --> GW: Trả segment video
+      GW --> FE: Trả segment cho trình phát
+      FE --> Viewer: Phát nội dung video
+
+      ref over FE, GW, MS, Broker
+        Chi tiết 3: Cập nhật tiến độ và lượt xem
+      end ref
+
+      FE -> GW: Gửi tiến độ xem định kỳ
+      GW -> MS: Chuyển tiếp tiến độ xem
+      MS -> MS: Lưu tiến độ và xét điều kiện tính lượt xem
+
+      opt Đạt ngưỡng tính lượt xem
+        MS ->> Broker: Phát sự kiện video.viewed
+      end
+
+      MS --> GW: Trả kết quả cập nhật tiến độ
+      GW --> FE: Trả kết quả
+    end
+  end
+end
+
+@enduml

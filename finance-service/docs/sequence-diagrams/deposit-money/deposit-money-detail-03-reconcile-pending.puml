@@ -1,0 +1,85 @@
+@startuml
+title Biểu đồ tuần tự - Nạp tiền - Chi tiết 3: Đối soát giao dịch đang chờ
+autonumber
+autoactivate on
+hide footbox
+
+skinparam maxMessageSize 260
+skinparam ParticipantPadding 48
+skinparam defaultFontSize 24
+skinparam sequence {
+  ActorFontSize 24
+  ParticipantFontSize 24
+  MessageFontSize 23
+  GroupFontSize 23
+  ReferenceFontSize 23
+}
+skinparam BoxPadding 8
+
+actor "Admin / Scheduler" as Trigger
+
+box "Finance Service" #F5F5F5
+  participant "DepositsController / Scheduler" as Entry
+  participant "ReconcilePendingPayOsDepositUseCase" as ReconcileUC
+  participant "Reconcile Lock" as Lock
+  participant "PayOS Gateway Client" as PayOSClient
+  participant "DepositSettlementService" as Settlement
+  participant "CancelPendingPayOsDepositUseCase" as CancelUC
+  database "Finance DB" as DB
+end box
+
+participant "PayOS" as PayOS
+
+Trigger -> Entry: Yêu cầu đối soát giao dịch nạp
+Entry -> ReconcileUC: Xử lý đối soát PayOS
+ReconcileUC -> Lock: Đặt khóa đối soát theo giao dịch nạp
+
+alt Đang có tiến trình đối soát khác
+  Lock --> ReconcileUC: Không đặt được khóa
+  ReconcileUC --> Entry: Trả thông báo đang đối soát
+else Đặt khóa thành công
+  Lock --> ReconcileUC: Đã đặt khóa
+  ReconcileUC -> DB: Lấy giao dịch nạp
+
+  alt Không tìm thấy hoặc không phải PayOS
+    DB --> ReconcileUC: Không thỏa điều kiện
+    ReconcileUC --> Entry: Trả kết quả phù hợp
+  else Tìm thấy giao dịch PayOS
+    DB --> ReconcileUC: Trả giao dịch nạp
+
+    alt Giao dịch không còn pending
+      ReconcileUC --> Entry: Trả trạng thái hiện tại
+    else Link thanh toán đã hết hạn theo hệ thống
+      ReconcileUC -> CancelUC: Hủy giao dịch nạp pending
+      CancelUC -> DB: Cập nhật giao dịch failed/cancelled
+      DB --> CancelUC: Đã cập nhật
+      CancelUC --> ReconcileUC: Trả kết quả hủy
+      ReconcileUC --> Entry: Trả kết quả
+    else Giao dịch còn có thể đối soát
+      ReconcileUC -> PayOSClient: Kiểm tra trạng thái thanh toán
+      PayOSClient -> PayOS: Lấy trạng thái link thanh toán
+      PayOS --> PayOSClient: Trả trạng thái PayOS
+      PayOSClient --> ReconcileUC: Trả trạng thái thanh toán
+
+      alt PayOS báo đã thanh toán
+        ReconcileUC -> Settlement: Hoàn tất giao dịch nạp
+        Settlement -> DB: Cộng coin, ghi transaction, cập nhật deposit
+        DB --> Settlement: Đã lưu thay đổi
+        Settlement --> ReconcileUC: Trả giao dịch completed
+        ReconcileUC --> Entry: Trả kết quả completed
+      else PayOS báo hết hạn hoặc đã hủy
+        ReconcileUC -> Settlement: Đánh dấu giao dịch thất bại
+        Settlement -> DB: Cập nhật deposit failed
+        DB --> Settlement: Đã cập nhật
+        Settlement --> ReconcileUC: Trả giao dịch failed
+        ReconcileUC --> Entry: Trả kết quả failed
+      else PayOS vẫn đang chờ
+        ReconcileUC --> Entry: Giữ trạng thái pending
+      end
+    end
+  end
+
+  ReconcileUC -> Lock: Giải phóng khóa đối soát
+end
+
+@enduml

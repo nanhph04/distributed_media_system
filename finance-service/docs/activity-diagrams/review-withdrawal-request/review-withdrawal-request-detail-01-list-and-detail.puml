@@ -1,0 +1,59 @@
+@startuml
+title Biểu đồ hoạt động - Duyệt yêu cầu rút tiền - Chi tiết 1: Xem danh sách và chi tiết
+
+skinparam TitleFontSize 38
+skinparam defaultFontSize 34
+skinparam ArrowFontSize 32
+skinparam ActivityFontSize 34
+skinparam DiamondFontSize 32
+skinparam PartitionFontSize 34
+
+|Admin|
+start
+:Mở màn hình duyệt rút tiền;
+:Nhập bộ lọc nếu cần;
+
+|Frontend|
+:Gửi yêu cầu lấy danh sách;
+
+|API Gateway|
+:Kiểm tra quyền admin;
+
+if (Là admin hợp lệ?) then (Có)
+  :Chuyển yêu cầu sang Finance Service;
+else (Không)
+  |Frontend|
+  :Hiển thị thông báo không có quyền;
+  stop
+endif
+
+|Finance Service|
+:Lấy danh sách yêu cầu rút tiền;
+:Tính thông tin phân trang và tổng hợp;
+:Trả danh sách;
+
+|Frontend|
+:Hiển thị danh sách yêu cầu;
+
+|Admin|
+:Chọn một yêu cầu để xem chi tiết;
+
+|Frontend|
+:Gửi yêu cầu lấy chi tiết;
+
+|Finance Service|
+:Tìm yêu cầu rút tiền;
+
+if (Yêu cầu tồn tại?) then (Có)
+  :Trả thông tin chi tiết;
+else (Không)
+  |Frontend|
+  :Hiển thị lỗi không tìm thấy yêu cầu;
+  stop
+endif
+
+|Admin|
+:Đối chiếu số tiền, ví và tài khoản ngân hàng;
+stop
+
+@enduml

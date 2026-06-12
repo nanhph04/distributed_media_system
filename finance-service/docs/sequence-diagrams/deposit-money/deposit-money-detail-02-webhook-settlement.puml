@@ -1,0 +1,82 @@
+@startuml
+title Biểu đồ tuần tự - Nạp tiền - Chi tiết 2: Webhook và cộng coin
+autonumber
+autoactivate on
+hide footbox
+
+skinparam maxMessageSize 260
+skinparam ParticipantPadding 48
+skinparam defaultFontSize 24
+skinparam sequence {
+  ActorFontSize 24
+  ParticipantFontSize 24
+  MessageFontSize 23
+  GroupFontSize 23
+  ReferenceFontSize 23
+}
+skinparam BoxPadding 8
+
+participant "PayOS" as PayOS
+
+box "Finance Service" #F5F5F5
+  participant "DepositsController" as Controller
+  participant "HandlePayOsDepositWebhookUseCase" as WebhookUC
+  participant "PayOS Gateway Client" as PayOSClient
+  participant "DepositSettlementService" as Settlement
+  database "Finance DB" as DB
+end box
+
+PayOS ->> Controller: Gửi webhook kết quả thanh toán
+Controller -> WebhookUC: Xử lý webhook PayOS
+
+alt Webhook không có kết quả thành công
+  WebhookUC --> Controller: Ghi nhận và bỏ qua
+  Controller --> PayOS: Xác nhận đã nhận webhook
+else Webhook báo thành công
+  WebhookUC -> PayOSClient: Xác thực chữ ký webhook
+
+  alt Chữ ký hoặc trạng thái không hợp lệ
+    PayOSClient --> WebhookUC: Từ chối webhook
+    WebhookUC --> Controller: Trả kết quả không xử lý
+    Controller --> PayOS: Xác nhận hoặc báo lỗi phù hợp
+  else Webhook hợp lệ
+    PayOSClient --> WebhookUC: Trả dữ liệu thanh toán đã xác thực
+    WebhookUC -> DB: Tìm giao dịch nạp theo mã thanh toán
+
+    alt Không tìm thấy giao dịch nạp
+      DB --> WebhookUC: Không có dữ liệu
+      WebhookUC --> Controller: Trả kết quả không xử lý được
+      Controller --> PayOS: Trả kết quả
+    else Tìm thấy giao dịch nạp
+      DB --> WebhookUC: Trả giao dịch nạp
+      WebhookUC -> Settlement: Hoàn tất giao dịch nạp
+      Settlement -> DB: Khóa giao dịch nạp và ví người dùng
+
+      alt Giao dịch đã hoàn tất trước đó
+        DB --> Settlement: Đã completed
+        Settlement --> WebhookUC: Trả kết quả hiện có
+        WebhookUC --> Controller: Xác nhận webhook trùng lặp
+        Controller --> PayOS: Xác nhận đã nhận webhook
+      else Giao dịch chưa hoàn tất
+        DB --> Settlement: Trả dữ liệu cần cập nhật
+        Settlement -> Settlement: Kiểm tra cổng thanh toán, số tiền và mã thanh toán
+
+        alt Thông tin thanh toán không khớp
+          Settlement --> WebhookUC: Từ chối hoàn tất giao dịch
+          WebhookUC --> Controller: Trả kết quả không hợp lệ
+          Controller --> PayOS: Trả kết quả
+        else Thông tin hợp lệ
+          Settlement -> DB: Cộng coin vào ví
+          Settlement -> DB: Ghi lịch sử giao dịch nạp
+          Settlement -> DB: Cập nhật giao dịch nạp completed
+          DB --> Settlement: Đã lưu thay đổi
+          Settlement --> WebhookUC: Hoàn tất nạp tiền
+          WebhookUC --> Controller: Trả kết quả đã xử lý
+          Controller --> PayOS: Xác nhận đã nhận webhook
+        end
+      end
+    end
+  end
+end
+
+@enduml

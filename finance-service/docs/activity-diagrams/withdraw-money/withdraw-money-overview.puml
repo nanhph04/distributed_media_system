@@ -1,0 +1,60 @@
+@startuml
+title Biểu đồ hoạt động - Rút tiền - Tổng quát
+
+skinparam TitleFontSize 38
+skinparam defaultFontSize 34
+skinparam ArrowFontSize 32
+skinparam ActivityFontSize 34
+skinparam DiamondFontSize 32
+skinparam PartitionFontSize 34
+
+|Creator|
+start
+:Mở màn hình rút tiền;
+:Nhập số coin muốn rút;
+:Nhập thông tin ngân hàng;
+:Xác nhận gửi yêu cầu rút tiền;
+
+|Frontend|
+:Gửi yêu cầu rút tiền;
+
+|API Gateway|
+:Kiểm tra phiên đăng nhập;
+
+if (Phiên hợp lệ?) then (Có)
+  :Chuyển yêu cầu sang Finance Service;
+else (Không)
+  |Frontend|
+  :Hiển thị yêu cầu đăng nhập;
+  |Creator|
+  :Xem thông báo;
+  stop
+endif
+
+|Finance Service|
+:Kiểm tra ví, số dư và trạng thái payout;
+
+if (Được phép rút tiền?) then (Có)
+  :Tính số tiền quy đổi và phí rút;
+else (Không)
+  |Frontend|
+  :Hiển thị lỗi rút tiền;
+  |Creator|
+  :Xem thông báo lỗi;
+  stop
+endif
+
+|Finance Service|
+:Tạm giữ số coin cần rút;
+:Tạo yêu cầu rút tiền chờ duyệt;
+:Ghi nhận giao dịch rút tiền;
+:Trả thông tin yêu cầu rút tiền;
+
+|Frontend|
+:Hiển thị yêu cầu rút tiền đã được tạo;
+
+|Creator|
+:Xem trạng thái chờ duyệt;
+stop
+
+@enduml

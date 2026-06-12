@@ -1,0 +1,117 @@
+@startuml
+title Thiết kế database Finance Service - Tổng quan
+
+left to right direction
+
+skinparam TitleFontSize 42
+skinparam defaultFontSize 30
+skinparam ArrowFontSize 28
+skinparam ClassFontSize 30
+skinparam ClassAttributeFontSize 29
+skinparam ClassHeaderFontSize 32
+skinparam linetype ortho
+skinparam nodesep 90
+skinparam ranksep 80
+hide circle
+
+entity "wallets" as wallets {
+  * id : uuid <<PK>>
+  --
+  * user_id : varchar <<UQ>>
+  * type : user/system_revenue
+  * balance : integer
+  * frozen_balance : integer
+  * status : active/frozen/closed
+}
+
+entity "ledger_transactions" as transactions {
+  * id : uuid <<PK>>
+  --
+  * type : deposit/withdrawal/payment
+  * asset_type : money/coin
+  * amount : integer
+  * status : pending/completed/failed
+  from_wallet_id : uuid <<FK>>
+  to_wallet_id : uuid <<FK>>
+  reference_id : varchar
+}
+
+entity "deposit_packages" as packages {
+  * id : uuid <<PK>>
+  --
+  * code : varchar <<UQ>>
+  * money_amount : integer
+  * total_coin_amount : integer
+  * is_active : boolean
+}
+
+entity "deposits" as deposits {
+  * id : uuid <<PK>>
+  --
+  * wallet_id : uuid <<FK>>
+  * user_id : varchar
+  * package_id : uuid <<FK>>
+  * money_amount : integer
+  * total_coin_amount : integer
+  * gateway : varchar
+  * status : pending/completed/failed
+}
+
+entity "withdrawals" as withdrawals {
+  * id : uuid <<PK>>
+  --
+  * wallet_id : uuid <<FK>>
+  * user_id : varchar
+  * coin_amount : integer
+  * money_amount : integer
+  * status : pending/completed/rejected
+}
+
+entity "payment_settlements" as settlements {
+  * id : uuid <<PK>>
+  --
+  * wallet_id : uuid <<FK>>
+  * transaction_id : uuid <<FK>>
+  * amount : integer
+  * status : pending/released
+  * release_after : datetime
+}
+
+entity "payout_holds" as holds {
+  * channel_id : varchar <<PK>>
+  --
+  * channel_owner_id : varchar
+  * status : active/inactive
+  reason : text
+}
+
+entity "payment_outbox" as outbox {
+  * id : uuid <<PK>>
+  --
+  * event_id : varchar <<UQ>>
+  * topic : varchar
+  * payload : jsonb
+  * status : pending/published
+}
+
+wallets ||--o{ transactions : "ghi sổ"
+wallets ||--o{ deposits : "nạp vào"
+wallets ||--o{ withdrawals : "rút từ"
+packages ||--o{ deposits : "được chọn"
+transactions ||--o| deposits : "tham chiếu"
+transactions ||--o| withdrawals : "tham chiếu"
+transactions ||--o{ settlements : "doanh thu chờ release"
+wallets ||--o{ settlements : "nhận doanh thu"
+holds }o--|| wallets : "giữ payout theo chủ kênh"
+
+note bottom of transactions
+  Đây là sổ cái chính.
+  Mọi biến động số dư nên có một giao dịch tương ứng.
+end note
+
+note bottom of settlements
+  Dùng cho doanh thu creator/system
+  cần chờ kỳ release trước khi khả dụng.
+end note
+
+@enduml

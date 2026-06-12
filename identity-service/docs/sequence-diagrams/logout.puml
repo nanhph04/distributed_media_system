@@ -1,0 +1,28 @@
+@startuml
+title Sequence Diagram - Dang xuat
+autonumber
+autoactivate on
+
+actor "Nguoi dung" as User
+participant "Frontend" as FE
+participant "API Gateway" as GW
+participant "Identity Service" as IDS
+
+User -> FE: Chon dang xuat
+FE -> GW: Gui yeu cau dang xuat
+GW -> IDS: Chuyen tiep yeu cau
+IDS -> IDS: Kiem tra phien dang nhap
+
+alt Phien con hieu luc
+  IDS -> IDS: Huy phien dang nhap
+  IDS --> GW: Tra ket qua thanh cong
+  GW --> FE: Tra ket qua
+else Khong co phien hop le
+  IDS --> GW: Tra ket qua thanh cong
+  GW --> FE: Tra ket qua
+end
+
+FE -> FE: Xoa trang thai dang nhap
+FE --> User: Chuyen ve man hinh dang nhap
+
+@enduml

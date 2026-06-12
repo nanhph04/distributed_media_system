@@ -1,0 +1,82 @@
+@startuml
+title Khóa tài khoản (Admin) - Tổng quát
+
+skinparam TitleFontSize 38
+skinparam defaultFontSize 34
+skinparam ArrowFontSize 32
+skinparam ActivityFontSize 34
+skinparam DiamondFontSize 32
+skinparam PartitionFontSize 34
+
+|Admin|
+start
+:Mở màn hình quản lý tài khoản;
+:Chọn tài khoản cần khóa;
+:Nhập lý do khóa tài khoản;
+:Xác nhận thao tác;
+
+|Frontend|
+:Gửi yêu cầu khóa tài khoản;
+
+|Hệ thống|
+:Kiểm tra phiên đăng nhập
+và quyền admin;
+
+if (Admin hợp lệ?) then (Có)
+  :Chuyển yêu cầu
+sang Identity Service;
+else (Không)
+  |Frontend|
+  :Hiển thị thông báo
+không có quyền;
+  |Admin|
+  :Xem thông báo;
+  stop
+endif
+
+|Hệ thống|
+:Kiểm tra tài khoản
+và lý do khóa;
+
+if (Có thể khóa tài khoản?) then (Có)
+  :Chuyển tài khoản sang
+trạng thái bị khóa;
+  :Thu hồi các phiên đăng nhập
+còn hiệu lực;
+  :Ghi sự kiện tài khoản
+đã đổi trạng thái;
+else (Không)
+  |Frontend|
+  :Hiển thị thông báo
+không thể khóa tài khoản;
+  |Admin|
+  :Xem thông báo;
+  stop
+endif
+
+|Frontend|
+:Cập nhật trạng thái tài khoản
+trên màn hình;
+
+|Admin|
+:Xem kết quả khóa tài khoản;
+
+|Hệ thống|
+:Phát sự kiện tài khoản
+đã đổi trạng thái;
+:Chuyển sự kiện đến
+các service liên quan;
+
+fork
+  |Media Service|
+  :Chi tiết 1:
+Xử lý kênh và hội viên;
+fork again
+  |Finance Service|
+  :Chi tiết 2:
+Xử lý ví của người dùng;
+end fork
+
+stop
+
+@enduml

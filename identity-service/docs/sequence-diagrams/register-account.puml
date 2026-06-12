@@ -1,0 +1,46 @@
+@startuml
+title Sequence Diagram - Tao tai khoan
+autonumber
+autoactivate on
+
+actor "Nguoi dung" as User
+participant "Frontend" as FE
+participant "API Gateway" as GW
+participant "Identity Service" as IDS
+queue "Outbox / Message Broker" as Broker
+
+User -> FE: Nhap email va mat khau
+FE -> GW: Gui yeu cau dang ky
+GW -> IDS: Chuyen tiep yeu cau
+IDS -> IDS: Kiem tra thong tin dang ky
+
+alt Khong the tao tai khoan
+  IDS --> GW: Thong bao dang ky that bai
+  GW --> FE: Tra ket qua
+  FE --> User: Hien thi loi dang ky
+else Co the tao tai khoan
+  IDS -> IDS: Tao tai khoan cho xac thuc
+  IDS -> IDS: Gui ma OTP
+  IDS --> GW: Yeu cau xac thuc email
+  GW --> FE: Tra ket qua
+  FE --> User: Hien thi man hinh nhap OTP
+end
+
+User -> FE: Nhap OTP
+FE -> GW: Gui yeu cau xac thuc email
+GW -> IDS: Chuyen tiep yeu cau
+IDS -> IDS: Kiem tra OTP
+
+alt OTP khong hop le
+  IDS --> GW: Thong bao xac thuc that bai
+  GW --> FE: Tra ket qua
+  FE --> User: Hien thi loi OTP
+else OTP hop le
+  IDS -> IDS: Hoan tat tao tai khoan
+  IDS ->> Broker: Phat su kien user.registered
+  IDS --> GW: Tra ket qua thanh cong
+  GW --> FE: Tra ket qua
+  FE --> User: Thong bao tao tai khoan thanh cong
+end
+
+@enduml
